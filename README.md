@@ -128,6 +128,32 @@ skill uses `build_dashboard.py` only.
 - Don't bypass the hook with `--no-verify`. If a hit is a false positive,
   rephrase the text.
 
+## Before publishing
+
+The pre-commit hook only protects commits made after it was installed. If
+this repo (or a fork of it) ever had commits before that, or `--no-verify`
+was used even once, the working tree can be clean while an old commit still
+isn't. Run `python scripts/scan_history.py` to check the full history -
+every patch ever committed (`git log -p --all`) and every author/committer
+name and email - against the same built-in patterns and your deny-list.
+
+If it finds something and the repo has no history worth keeping, squash to a
+single initial commit and force-push:
+
+```
+git checkout --orphan clean-main
+git add -A
+git commit -m "Initial commit"
+git branch -D main
+git branch -m main
+git push --force origin main
+```
+
+Rewrite history this way only on a repo you're sure has no collaborators
+relying on the old commits, and only after fixing whatever the scan found in
+the current working tree first (an orphan commit still contains today's
+files).
+
 ## Limitations
 
 - Quiz pages contain their answers in the page source. That is fine for a
