@@ -1,0 +1,158 @@
+{
+ "course": {
+  "title": "PHYS 105 Midterm 1",
+  "prefix": "phys105-mt1",
+  "tag": "phys105",
+  "exam_key": "phys105_mt1",
+  "wiki_dir": "wiki/courses/phys105",
+  "created": "2026-09-26",
+  "today": "2026-09-26",
+  "tags": [
+   "phys105",
+   "exam-prep"
+  ],
+  "exam": {
+   "when": "2026-10-22T14:00:00-07:00",
+   "label": "Thu 22 Oct, 14:00",
+   "name": "PHYS 105 Midterm 1"
+  },
+  "cols": [
+   "Motion",
+   "Forces and energy"
+  ],
+  "related": [
+   "phys105"
+  ],
+  "bank_intro": "One worked problem per item. Do it on paper, photograph it, and have Claude grade it against the folded rubric.",
+  "tracker_intro": "Tracks the three Midterm 1 items from first pre-test to mastered.",
+  "loop": "1. Pre-test each item on paper, cold.\n2. Photograph the work and have Claude grade it step by step.\n3. Drill anything under 80% from its concept page.\n4. Post-test on a fresh problem at least a day later.",
+  "grading": "Each rubric step is marked Y or N. An attempt passes at 80% of steps.",
+  "plan": [
+   {
+    "date": "2026-09-29",
+    "dow": "Tue",
+    "mon": "Sep",
+    "head": "Pre-test motion",
+    "items": [
+     "Pre-test constant acceleration"
+    ]
+   },
+   {
+    "date": "2026-10-01",
+    "dow": "Thu",
+    "mon": "Oct",
+    "head": "Pre-test forces and energy",
+    "items": [
+     "Pre-test Newton's second law",
+     "Pre-test work and energy"
+    ]
+   },
+   {
+    "date": "2026-10-15",
+    "dow": "Thu",
+    "mon": "Oct",
+    "head": "Post-tests",
+    "items": [
+     "Post-test every weak or shaky item"
+    ]
+   }
+  ],
+  "schedule_note": "Keep the last week for post-tests."
+ },
+ "items": [
+  {
+   "id": "constant-acceleration",
+   "title": "Constant acceleration",
+   "short": "SUVAT",
+   "col": 0,
+   "lec": "L1",
+   "mins": 8,
+   "needs": [],
+   "due": "2026-09-29",
+   "format": "steps",
+   "logic": "List what you know, pick the equation missing the unknown you don't need, solve.",
+   "q": "A cyclist moving at $4\\ \text{m/s}$ accelerates at $1.5\\ \text{m/s}^2$ for $6\\ \text{s}$. How far does she travel, and how fast is she going at the end?",
+   "rubric": [
+    [
+     "List the knowns.",
+     "$u = 4$, $a = 1.5$, $t = 6$"
+    ],
+    [
+     "Distance.",
+     "$s = ut + \tfrac12 at^2 = 24 + 27 = 51\\ \text{m}$"
+    ],
+    [
+     "Final speed.",
+     "$v = u + at = 4 + 9 = 13\\ \text{m/s}$"
+    ],
+    [
+     "Units on both answers.",
+     "m and m/s"
+    ]
+   ],
+   "post": []
+  },
+  {
+   "id": "newtons-second-law",
+   "title": "Newton's second law",
+   "short": "F = ma",
+   "col": 1,
+   "lec": "L3",
+   "mins": 8,
+   "needs": [],
+   "due": "2026-10-01",
+   "format": "steps",
+   "logic": "Draw the forces, find the net force along the motion, divide by mass.",
+   "q": "A $5\\ \text{kg}$ crate is pushed with $30\\ \text{N}$ across a floor with $10\\ \text{N}$ of friction. Find its acceleration.",
+   "rubric": [
+    [
+     "Draw both horizontal forces.",
+     "push 30 N forward, friction 10 N back"
+    ],
+    [
+     "Net force.",
+     "$30 - 10 = 20\\ \text{N}$"
+    ],
+    [
+     "Acceleration.",
+     "$a = 20/5 = 4\\ \text{m/s}^2$"
+    ]
+   ],
+   "post": []
+  },
+  {
+   "id": "work-energy",
+   "title": "Work and energy",
+   "short": "Energy",
+   "col": 1,
+   "lec": "L4",
+   "mins": 8,
+   "needs": [
+    "newtons-second-law"
+   ],
+   "due": "2026-10-01",
+   "format": "steps",
+   "logic": "Potential energy lost becomes kinetic energy gained when there is no friction.",
+   "q": "A $0.5\\ \text{kg}$ ball rolls without friction down a ramp $1.8\\ \text{m}$ high. Take $g = 10\\ \text{m/s}^2$. How fast is it moving at the bottom?",
+   "rubric": [
+    [
+     "Set energy lost equal to energy gained.",
+     "$mgh = \tfrac12 mv^2$"
+    ],
+    [
+     "Cancel the mass.",
+     "$v^2 = 2gh$"
+    ],
+    [
+     "Substitute.",
+     "$v^2 = 2 \\cdot 10 \\cdot 1.8 = 36$"
+    ],
+    [
+     "Take the root.",
+     "$v = 6\\ \text{m/s}$"
+    ]
+   ],
+   "post": []
+  }
+ ]
+}

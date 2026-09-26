@@ -1,0 +1,5 @@
+{
+  "vault_name": "My Vault",
+  "vault_subpath": "",
+  "_comment": "Copy to brain.config.json (gitignored). vault_name is your Obsidian vault's name. vault_subpath is where this folder sits inside the vault, e.g. \"Brain\" if the vault root is one level up; leave empty if this folder is the vault. Used only to print obsidian:// links after a build."
+}

@@ -1,0 +1,16 @@
+# Build output (quiz pages embed questions and answers)
+out/
+**/out/
+
+# Local settings
+brain.config.json
+.identifying-denylist.txt
+.claude/settings.local.json
+
+# Obsidian and OS
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/workspace*
+.DS_Store
+Thumbs.db
+__pycache__/

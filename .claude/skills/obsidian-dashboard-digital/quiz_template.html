@@ -1,0 +1,402 @@
+<title>@@PAGE_TITLE@@</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap">
+<style>
+:root{
+  --bg:#F3F5F2; --surface:#FFFFFF; --surface-2:#ECF0EC; --ink:#18202B; --muted:#586473;
+  --line:#D6DDD8; --grid:#E4E9E5; --accent:#2B55A0; --accent-ink:#FFFFFF; --accent-soft:#E3EAF6;
+  --st-untested:#7A8591; --st-weak:#B3392F; --st-shaky:#9C630F; --st-mastered:#2E7849;
+  --t-untested:#EAEDEF; --t-weak:#F8E4E1; --t-shaky:#F6EBD8; --t-mastered:#E1F0E6;
+  --serif:"Newsreader", Georgia, "Times New Roman", serif;
+  --sans:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#10141A; --surface:#171D25; --surface-2:#1E252F; --ink:#E2E7EE; --muted:#9AA5B3;
+    --line:#2C3541; --grid:#161C23; --accent:#8AAAEB; --accent-ink:#0D1320; --accent-soft:#1D2A42;
+    --st-untested:#8E99A7; --st-weak:#E5786D; --st-shaky:#DDA64B; --st-mastered:#6EC28F;
+    --t-untested:#232A33; --t-weak:#3A2327; --t-shaky:#382E1D; --t-mastered:#1C3327;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#10141A; --surface:#171D25; --surface-2:#1E252F; --ink:#E2E7EE; --muted:#9AA5B3;
+  --line:#2C3541; --grid:#161C23; --accent:#8AAAEB; --accent-ink:#0D1320; --accent-soft:#1D2A42;
+  --st-untested:#8E99A7; --st-weak:#E5786D; --st-shaky:#DDA64B; --st-mastered:#6EC28F;
+  --t-untested:#232A33; --t-weak:#3A2327; --t-shaky:#382E1D; --t-mastered:#1C3327;
+}
+*{box-sizing:border-box}
+body{background-color:var(--bg);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px;color:var(--ink);font:15px/1.55 var(--sans)}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 64px}
+@media (max-width:520px){.wrap{padding-inline:16px}}
+h1,h2,h3{font-family:var(--serif);font-weight:600;text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,4.4vw,40px)} h2{font-size:24px} h3{font-size:17px}
+.eyebrow{font:500 12px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+button,textarea,input{font:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:grid;grid-template-columns:1fr auto;gap:20px 32px;align-items:end}
+@media (max-width:760px){.top{grid-template-columns:1fr}}
+.sub{color:var(--muted);margin-top:8px;max-width:62ch}
+.clock{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 18px;min-width:240px}
+.clock .big{font:500 30px/1.1 var(--mono);margin:6px 0 4px}
+.clock .where{color:var(--muted);font-size:13px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+.summary{margin-top:24px}
+.bar{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:12px 0 10px;background:var(--surface-2)}
+.bar span{display:block;height:100%;background:var(--c)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px}
+.legend b{font-family:var(--mono);font-weight:500}
+.note{color:var(--muted);font-size:13px}
+.banner{margin-top:12px;padding:10px 14px;border-radius:8px;background:var(--t-shaky);color:var(--ink);font-size:14px}
+.s-untested{--c:var(--st-untested);--t:var(--t-untested)} .s-weak{--c:var(--st-weak);--t:var(--t-weak)}
+.s-shaky{--c:var(--st-shaky);--t:var(--t-shaky)} .s-mastered{--c:var(--st-mastered);--t:var(--t-mastered)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 12px/1 var(--sans);letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:5px 8px;background:var(--t);color:var(--c)}
+.grid{display:grid;grid-template-columns:290px minmax(0,1fr);gap:16px;align-items:start;margin-top:22px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px;position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);max-height:calc(100vh - 40px);overflow:auto}
+@media (max-width:820px){.list{position:static;max-height:280px}}
+.list h4{margin:12px 8px 4px;font:500 11.5px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-radius:6px;padding:7px 8px;color:var(--ink);cursor:pointer;font-size:14px}
+.item:hover{background:var(--surface-2)} .item[aria-current="true"]{background:var(--accent-soft)}
+.item .nm{flex:1;min-width:0} .item .sc{font:12px var(--mono);color:var(--muted)}
+.detail{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 24px;min-width:0}
+@media (max-width:520px){.detail{padding:18px 16px}}
+.dhead{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--muted);font-size:13px;margin-top:8px}
+.qs{display:grid;gap:14px;margin-top:20px}
+.q{border:1px solid var(--line);border-radius:10px;padding:16px 18px;background:var(--surface)}
+.q .stem{font-family:var(--serif);font-size:18px;line-height:1.5;margin:0 0 12px;max-width:68ch}
+.q .n{font:500 12px var(--mono);color:var(--muted);margin-bottom:6px;display:block}
+.opts{display:grid;gap:6px;margin-bottom:12px}
+.opt{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer}
+.opt:hover{border-color:var(--accent)}
+.opt input{margin-top:4px;accent-color:var(--accent)}
+.opt.right{border-color:var(--st-mastered);background:var(--t-mastered)}
+.opt.wrong{border-color:var(--st-weak);background:var(--t-weak)}
+label.rl{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+textarea{width:100%;min-height:62px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--bg);color:var(--ink)}
+.verdict{margin-top:10px;display:grid;gap:6px;font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.ok,.no{font:500 12px/1 var(--sans);padding:5px 8px;border-radius:4px}
+.ok{background:var(--t-mastered);color:var(--st-mastered)} .no{background:var(--t-weak);color:var(--st-weak)}
+.ref{padding:8px 12px;background:var(--surface-2);border-radius:8px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:18px}
+.btn{display:inline-flex;align-items:center;gap:8px;border-radius:7px;padding:9px 14px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);cursor:pointer;font-weight:500}
+.btn:hover{border-color:var(--accent)} .btn:disabled{opacity:.55;cursor:not-allowed}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.logic{margin-top:18px;padding:12px 16px;background:var(--surface-2);border-radius:8px;max-width:72ch}
+.score{font:500 26px/1 var(--mono)}
+.tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;margin-top:8px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th{font:500 11.5px/1.2 var(--sans);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:var(--surface-2)}
+.marks{font-family:var(--mono);letter-spacing:.12em}
+.marks .y{color:var(--st-mastered)} .marks .x{color:var(--st-weak)}
+.sel{font:inherit;padding:6px 8px;border-radius:6px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);max-width:100%}
+.sec{margin-top:26px}
+.sec > .eyebrow{display:block;margin-bottom:8px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="h1"></h1>
+      <p class="sub">Answer every question in an item and write a line of reasoning for each. Grading has two parts. <b>Answers</b>: each letter is right or wrong. <b>Reasoning</b>: Claude scores each reason 1–5 for how close it is to the course material, and 3 is a pass. An item passes when at least 80% of answers are right <i>and</i> at least 80% of reasons score 3 or more.</p>
+    </div>
+    <div class="clock" aria-live="polite">
+      <div class="eyebrow">Time to the exam</div>
+      <div class="big" id="countdown">–</div>
+      <div class="where" id="where"></div>
+    </div>
+  </header>
+
+  <section class="panel summary">
+    <div class="eyebrow">Where you stand</div>
+    <div class="bar" id="bar" role="img"></div>
+    <div class="legend" id="legend"></div>
+    <div class="note" id="savenote" style="margin-top:10px"></div>
+    <div class="banner" id="nodb" hidden>Answers can't be saved in this view. Open the page on claude.ai to keep your attempts.</div>
+  </section>
+
+  <div class="grid">
+    <nav class="list" id="list" aria-label="Items"></nav>
+    <article class="detail" id="detail"></article>
+  </div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/null;
+const N = DATA.items, BY = Object.fromEntries(N.map(i => [i.id, i]));
+const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const store = {
+  get(k, d){ try { const v = localStorage.getItem("q:" + DATA.course.prefix + ":" + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
+  set(k, v){ try { localStorage.setItem("q:" + DATA.course.prefix + ":" + k, JSON.stringify(v)); } catch(e){} },
+  del(k){ try { localStorage.removeItem("q:" + DATA.course.prefix + ":" + k); } catch(e){} }
+};
+const LETTERS = ["A","B","C","D","E"];
+let db = null, sample = null, attempts = [], current = store.get("current", N[0].id);
+if (!BY[current]) current = N[0].id;
+let view = null;   // {item, setKey, kind, questions, phase: "answer"|"grading"|"result", result}
+
+/* ---------- rubric ---------- */
+const RUBRIC = [
+  [5, "Exact", "States the key idea of the reference reason precisely, nothing wrong."],
+  [4, "Close", "Key idea there, with a small gap or loose wording."],
+  [3, "Pass", "The core idea is present but incomplete or imprecise; no error that changes the answer."],
+  [2, "Partial", "Only part of the idea, off to the side, or the right idea mixed with a real error."],
+  [1, "Missing", "Wrong, absent, too vague to fit only this answer, or argues for a wrong answer."]
+];
+const REASON_PASS = 3;
+/* An attempt's score is the weaker of its two parts (answers right, reasons at 3+),
+   so both must reach 80%. Older attempts (one combined mark per question) keep their saved score. */
+
+/* ---------- status from attempts ---------- */
+function itemAttempts(id){ return attempts.filter(a => a.item === id).sort((a, b) => a.ts - b.ts); }
+function statusOf(id){
+  const a = itemAttempts(id);
+  if (!a.length) return "untested";
+  if (a[a.length - 1].score < 0.8) return "weak";
+  const passes = a.filter(x => x.score >= 0.8);
+  if (passes.length >= 2 && new Set(passes.map(x => x.setKey)).size >= 2 && passes[passes.length - 1].ts - passes[0].ts >= 864e5) return "mastered";
+  return "shaky";
+}
+function lastScore(id){ const a = itemAttempts(id); return a.length ? Math.round(a[a.length - 1].score * 100) + "%" : ""; }
+
+/* ---------- header ---------- */
+document.getElementById("eyebrow").textContent = DATA.course.eyebrow;
+document.getElementById("h1").textContent = DATA.course.heading;
+document.getElementById("where").textContent = DATA.course.exam.label;
+function tick(){
+  const ms = new Date(DATA.course.exam.when) - new Date(), el = document.getElementById("countdown");
+  if (ms <= 0) { el.textContent = "Exam day"; return; }
+  el.textContent = Math.floor(ms/864e5) + "d " + String(Math.floor(ms%864e5/36e5)).padStart(2,"0") + "h " + String(Math.floor(ms%36e5/6e4)).padStart(2,"0") + "m";
+}
+tick(); setInterval(tick, 30000);
+function summary(){
+  const order = ["mastered","shaky","weak","untested"], c = {}; order.forEach(s => c[s] = 0);
+  N.forEach(i => c[statusOf(i.id)]++);
+  const bar = document.getElementById("bar");
+  bar.innerHTML = order.map(s => c[s] ? `<span class="s-${s}" style="width:${c[s]/N.length*100}%"></span>` : "").join("");
+  bar.setAttribute("aria-label", order.map(s => c[s] + " " + s).join(", "));
+  document.getElementById("legend").innerHTML = order.map(s => `<span class="s-${s}"><span class="dot" style="margin-right:6px"></span>${s} <b>${c[s]}</b></span>`).join("") + `<span class="note">of <b>${N.length}</b> items</span>`;
+  const unsynced = attempts.filter(a => !a.synced).length;
+  document.getElementById("savenote").textContent = db
+    ? `${attempts.length} saved attempt${attempts.length === 1 ? "" : "s"}. ${unsynced ? unsynced + " not yet in your wiki: ask Claude Code to sync " + DATA.course.title + "." : "All synced to your wiki."}`
+    : "";
+}
+
+/* ---------- list ---------- */
+function renderList(){
+  const el = document.getElementById("list");
+  el.innerHTML = DATA.course.cols.map((t, ci) => `<h4>${esc(t)}</h4>` + N.filter(i => i.col === ci).map(i => {
+    const s = statusOf(i.id);
+    return `<button class="item s-${s}" data-id="${i.id}" ${i.id === current ? 'aria-current="true"' : ""}><span class="dot"></span><span class="nm">${esc(i.title)}</span><span class="sc">${lastScore(i.id)}</span></button>`;
+  }).join("")).join("");
+  el.querySelectorAll(".item").forEach(b => b.addEventListener("click", () => openItem(b.dataset.id)));
+}
+function openItem(id){
+  current = id; store.set("current", id);
+  view = { item: id, setKey: "bank", kind: "pretest", questions: BY[id].questions, phase: "answer" };
+  renderList(); renderDetail();
+  if (matchMedia("(max-width: 820px)").matches) document.getElementById("detail").scrollIntoView({ behavior: "auto", block: "start" });
+}
+
+/* ---------- detail ---------- */
+function draftKey(){ return "draft:" + view.item + ":" + view.setKey; }
+function renderDetail(){
+  const i = BY[view.item], s = statusOf(i.id), el = document.getElementById("detail");
+  const draft = store.get(draftKey(), { c: {}, r: {} });
+  const res = view.phase === "result" ? view.result : null;
+  const qs = view.questions.map((q, k) => {
+    const opts = q.type === "tf" ? ["True", "False"] : q.options;
+    const vals = q.type === "tf" ? ["True", "False"] : opts.map((_, j) => LETTERS[j]);
+    const chosen = res ? res.answers[k].choice : draft.c[k];
+    const optHtml = opts.map((o, j) => {
+      const v = vals[j]; let cls = "";
+      if (res) { if (v === q.answer) cls = "right"; else if (v === chosen) cls = "wrong"; }
+      return `<label class="opt ${cls}"><input type="radio" name="q${k}" value="${esc(v)}" ${chosen === v ? "checked" : ""} ${view.phase !== "answer" ? "disabled" : ""}><span>${q.type === "tf" ? "" : "<b>" + v + ".</b> "}${esc(o)}</span></label>`;
+    }).join("");
+    const reason = res ? res.answers[k].reasoning : (draft.r[k] ?? "");
+    let verdict = "";
+    if (res) {
+      const a = res.answers[k];
+      verdict = `<div class="verdict"><div class="chips"><span class="${a.letterOk ? "ok" : "no"}">Answer ${a.letterOk ? "right" : "wrong"}</span><span class="${a.reasonScore >= REASON_PASS ? "ok" : "no"}">Reasoning ${a.reasonScore}/5 · ${esc((RUBRIC.find(r => r[0] === a.reasonScore) || [0, ""])[1])}</span></div>
+        ${a.feedback ? `<div>${esc(a.feedback)}</div>` : ""}<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div></div>`;
+    }
+    return `<div class="q"><span class="n">${q.type === "tf" ? "True or false" : "Question"} ${k + 1}</span><p class="stem">${esc(q.stem)}</p>
+      <div class="opts" role="radiogroup">${optHtml}</div>
+      <label class="rl" for="r${k}">Your reasoning</label>
+      <textarea id="r${k}" data-k="${k}" ${view.phase !== "answer" ? "readonly" : ""} placeholder="Why is that the answer? One or two sentences.">${esc(reason)}</textarea>${verdict}</div>`;
+  }).join("");
+  const hist = itemAttempts(i.id).slice().reverse();
+  el.innerHTML = `
+    <div class="dhead"><div><div class="eyebrow">${esc(i.lec)} · ${view.kind === "pretest" ? "pre-test" : "post-test, new questions"}</div><h2 style="margin-top:6px">${esc(i.title)}</h2></div>
+      <span class="pill s-${s}"><span class="dot"></span>${s}</span></div>
+    <div class="meta"><span>${view.questions.length} questions</span><span>About ${i.mins} minutes</span><span>Pre-test by ${fmt(i.due)}</span>${view.kind === "pretest" ? "" : "<span>Written by Claude from your wiki page</span>"}</div>
+    ${res ? `<div class="sec"><span class="eyebrow">Result</span><div class="score">Answers ${res.mcqCorrect}/${res.total} · Reasoning ${res.reasonPassed}/${res.total} at 3+</div>
+      <p class="note" style="margin:6px 0 0">Average reasoning ${res.reasonAvg.toFixed(1)}/5. ${res.score >= 0.8 ? "Pass on both parts." : "Not a pass yet: " + [res.mcqCorrect / res.total < 0.8 ? "answers under 80%" : "", res.reasonPassed / res.total < 0.8 ? "under 80% of reasons at 3+" : ""].filter(Boolean).join(" and ") + ". Reread the reference reasons below, then try new questions."} ${res.gradedBy === "self" ? "Reasons were self-checked." : ""} ${res.saved ? "Saved." : db ? "Not saved: " + esc(res.saveError || "") : "Not saved in this view."}</p></div>
+      <div class="logic"><span class="eyebrow" style="display:block;margin-bottom:6px">The logic in one line</span>${esc(i.logic)}</div>` : ""}
+    <div class="qs">${qs}</div>
+    <div class="actions" id="actions"></div>
+    <div class="sec"><span class="eyebrow">Your attempts</span>${hist.length ? `<div class="tblwrap"><table><thead><tr><th>Date</th><th>Set</th><th>Answers</th><th>Reasoning 1–5</th><th>Score</th><th>In wiki</th></tr></thead><tbody>${hist.map(a => `<tr><td class="mono">${esc(a.date)}</td><td>${a.kind === "pretest" ? "Pre-test" : "New questions"}</td><td class="marks">${[...a.marks].map(c => c === "Y" ? '<span class="y">Y</span>' : '<span class="x">N</span>').join("")}</td><td class="marks">${Array.isArray(a.reasonScores) ? a.reasonScores.map(x => `<span class="${x >= REASON_PASS ? "y" : "x"}">${x}</span>`).join("") : "–"}</td><td class="mono">${Math.round(a.score*100)}%</td><td>${a.synced ? "yes" : "not yet"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">No attempts yet.</p>`}</div>`;
+  if (!res && view.phase === "answer") {
+    el.querySelectorAll("input[type=radio]").forEach(r => r.addEventListener("change", () => { const d = store.get(draftKey(), { c: {}, r: {} }); d.c[r.name.slice(1)] = r.value; store.set(draftKey(), d); updateSubmit(); }));
+    el.querySelectorAll("textarea").forEach(t => t.addEventListener("input", () => { const d = store.get(draftKey(), { c: {}, r: {} }); d.r[t.dataset.k] = t.value; store.set(draftKey(), d); updateSubmit(); }));
+  }
+  renderActions();
+}
+function fmt(iso){ return new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); }
+function ready(){
+  const d = store.get(draftKey(), { c: {}, r: {} });
+  return view.questions.every((_, k) => d.c[k] && (d.r[k] || "").trim().length >= 8);
+}
+function renderActions(){
+  const a = document.getElementById("actions");
+  if (view.phase === "answer") {
+    a.innerHTML = `<button class="btn primary" id="submit">Submit for grading</button><span class="note" id="submitnote"></span>`;
+    a.querySelector("#submit").addEventListener("click", submit);
+    updateSubmit();
+  } else if (view.phase === "grading") {
+    a.innerHTML = `<span class="note" id="gradenote">Claude is checking your reasoning. This usually takes 10–40 seconds.</span>`;
+  } else if (view.phase === "self") {
+    a.innerHTML = "";
+  } else {
+    a.innerHTML = `<button class="btn primary" id="newq">Post-test: new questions</button><button class="btn" id="again">Back to the pre-test</button><span class="note" id="newnote"></span>`;
+    a.querySelector("#newq").addEventListener("click", newQuestions);
+    a.querySelector("#again").addEventListener("click", () => openItem(view.item));
+  }
+}
+function updateSubmit(){
+  const b = document.getElementById("submit"); if (!b) return;
+  const ok = ready(); b.disabled = !ok;
+  document.getElementById("submitnote").textContent = ok ? "" : "Pick an answer and write a reason for every question.";
+}
+
+/* ---------- grading ---------- */
+async function submit(){
+  const d = store.get(draftKey(), { c: {}, r: {} });
+  const answers = view.questions.map((q, k) => ({ choice: d.c[k], reasoning: (d.r[k] || "").trim(), letterOk: d.c[k] === q.answer }));
+  view.phase = "grading"; renderDetail();
+  let graded = null;
+  if (sample) {
+    const payload = view.questions.map((q, k) => ({ question: q.stem, options: q.type === "tf" ? ["True", "False"] : q.options.map((o, j) => LETTERS[j] + ". " + o),
+      correct_answer: q.answer, reference_reason: q.why, student_answer: answers[k].choice, student_reasoning: answers[k].reasoning }));
+    const prompt = `You are grading a student's written reasoning on ${DATA.course.subject} exam questions (multiple choice and true/false).
+For each question you get the question, its options, the correct answer, a reference reason from the course material, the student's answer, and the student's reasoning.
+Judge ONLY the reasoning; whether the chosen letter is right is marked separately. Give reason_score, an integer 1-5 for how close the reasoning is to the reference reason, in any words; brevity is fine:
+5 Exact: states the key idea precisely and says nothing wrong.
+4 Close: the key idea is there, with a small gap or loose wording.
+3 Pass: the core idea is present but incomplete or imprecise, with no error that would change the answer.
+2 Partial: only part of the idea, a tangent, or the right idea mixed with a real factual error.
+1 Missing: wrong, absent, vague enough to fit any answer, or argues for a wrong answer.
+feedback: one or two plain sentences to the student saying what their reasoning got right and what it missed or got wrong, and what would lift it a band. Do not repeat the question.
+Reply with only a JSON array with one object per question, in order, like [{"reason_score": 4, "feedback": "..."}].
+
+Questions:
+${JSON.stringify(payload)}`;
+    try {
+      const out = await sample.json(prompt, { cache: false });
+      if (Array.isArray(out) && out.length === answers.length && out.every(g => [1,2,3,4,5].includes(Math.round(Number(g && g.reason_score))))) graded = out;
+      else throw { code: "invalid_json" };
+    } catch (e) {
+      const hide = ["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
+      if (hide.includes(e.code)) sample = null;
+      const msg = e.code === "rate_limited" ? "Claude is busy or you've hit a usage limit. Check the reasons yourself below."
+        : "Claude couldn't grade this time. Check the reasons yourself below.";
+      return selfCheck(answers, msg);
+    }
+  } else {
+    return selfCheck(answers, "Claude isn't available in this view, so check each reason yourself against the reference.");
+  }
+  answers.forEach((a, k) => { a.reasonScore = Math.round(Number(graded[k].reason_score)); a.reasonOk = a.reasonScore >= REASON_PASS; a.feedback = String(graded[k].feedback || ""); });
+  finish(answers, "claude");
+}
+function selfCheck(answers, msg){
+  view.phase = "self"; renderDetail();
+  const el = document.getElementById("detail");
+  el.querySelectorAll(".q").forEach((node, k) => {
+    const q = view.questions[k];
+    const box = document.createElement("div"); box.className = "verdict";
+    box.innerHTML = `<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div><label class="rl" for="s${k}">How close is your reason? (3 is a pass)</label><select class="sel" id="s${k}" data-k="${k}">${RUBRIC.map(r => `<option value="${r[0]}" ${r[0] === 3 ? "selected" : ""}>${r[0]} · ${r[1]}: ${esc(r[2])}</option>`).join("")}</select>`;
+    node.appendChild(box);
+  });
+  const a = document.getElementById("actions");
+  a.innerHTML = `<button class="btn primary" id="selfdone">Save my self-check</button><span class="note">${esc(msg)}</span>`;
+  a.querySelector("#selfdone").addEventListener("click", () => {
+    el.querySelectorAll("select[data-k]").forEach(c => { const a = answers[+c.dataset.k]; a.reasonScore = +c.value; a.reasonOk = a.reasonScore >= REASON_PASS; a.feedback = ""; });
+    finish(answers, "self");
+  });
+}
+async function finish(answers, gradedBy){
+  const total = answers.length;
+  const marks = answers.map(a => a.letterOk ? "Y" : "N").join("");              // part 1: pure answer marks
+  const mcqCorrect = [...marks].filter(c => c === "Y").length;
+  const reasonScores = answers.map(a => a.reasonScore);                          // part 2: reasoning, 1-5
+  const reasonPassed = reasonScores.filter(x => x >= REASON_PASS).length;
+  const reasonAvg = reasonScores.reduce((x, y) => x + y, 0) / total;
+  const correct = answers.filter(a => a.letterOk && a.reasonScore >= REASON_PASS).length;
+  const now = new Date(), date = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
+  const rec = { item: view.item, kind: view.kind, setKey: view.setKey, date, ts: now.getTime(), marks, correct, total,
+    mcqCorrect, reasonScores, reasonPassed, reasonAvg, schema: 2,
+    score: Math.min(mcqCorrect, reasonPassed) / total, gradedBy, synced: false, answers,
+    ...(view.kind === "posttest" ? { questions: view.questions } : {}) };
+  const result = { ...rec, saved: false };
+  if (db) {
+    try { await db.collection("attempts").doc(view.item + "--" + now.getTime()).set(rec); result.saved = true; store.del(draftKey()); }
+    catch (e) { result.saveError = e.code === "quota_exceeded" ? "the store is full." : "the save failed; try submitting again later."; }
+  }
+  view.phase = "result"; view.result = result; renderDetail(); renderList(); summary();
+}
+
+/* ---------- post-test ---------- */
+async function newQuestions(){
+  const note = document.getElementById("newnote"), btn = document.getElementById("newq");
+  if (!sample) { note.textContent = "New questions need Claude, which isn't available in this view."; return; }
+  const i = BY[view.item];
+  btn.disabled = true; note.textContent = "Writing new questions from your wiki page…";
+  const prompt = `Write 3 new exam questions for ${DATA.course.subject} on "${i.title}", in the exam's style: single-best-answer multiple choice with exactly 4 options, or true/false. Use ONLY facts stated in the source text below, and prefer what the course lecture says where the text notes a disagreement; do not ask about figures the text marks as disputed or unclear. Make them different from these existing questions: ${JSON.stringify(i.questions.map(q => q.stem))}. Two multiple choice and one true/false.
+Each needs the correct answer and a one-sentence reason drawn from the text.
+Reply with only a JSON array like [{"type":"mc","stem":"...","options":["...","...","...","..."],"answer":"B","why":"..."},{"type":"tf","stem":"...","answer":"False","why":"..."}].
+
+Source text:
+${i.page}`;
+  try {
+    const out = await sample.json(prompt, { cache: false });
+    const qs = (Array.isArray(out) ? out : []).filter(q => q && typeof q.stem === "string" && typeof q.why === "string" &&
+      ((q.type === "mc" && Array.isArray(q.options) && q.options.length === 4 && LETTERS.slice(0,4).includes(q.answer)) ||
+       (q.type === "tf" && (q.answer === "True" || q.answer === "False"))))
+      .map(q => ({ type: q.type, stem: q.stem, options: q.options, answer: q.answer, why: q.why }));
+    if (qs.length < 2) throw { code: "invalid_json" };
+    view = { item: i.id, setKey: "gen-" + Date.now(), kind: "posttest", questions: qs, phase: "answer" };
+    renderDetail();
+  } catch (e) {
+    btn.disabled = false;
+    note.textContent = e.code === "rate_limited" ? "Claude is busy or you've hit a usage limit. Try again later." : "That didn't produce usable questions. Try again.";
+  }
+}
+
+/* ---------- boot ---------- */
+view = { item: current, setKey: "bank", kind: "pretest", questions: BY[current].questions, phase: "answer" };
+renderList(); renderDetail(); summary();
+(async () => {
+  if (!window.claude?.use) { document.getElementById("nodb").hidden = false; return; }
+  const [d, s] = await Promise.all([window.claude.use("db"), window.claude.use("sample")]);
+  sample = s;
+  if (!d) { document.getElementById("nodb").hidden = false; return; }
+  db = d;
+  db.collection("attempts").onSnapshot(snap => {
+    attempts = snap.docs.filter(x => x.exists).map(x => x.data());
+    renderList(); summary();
+    const typing = document.activeElement && document.activeElement.tagName === "TEXTAREA";
+    if (view.phase === "result" || (view.phase === "answer" && !typing)) renderDetail();
+  }, () => { document.getElementById("nodb").hidden = false; });
+})();
+</script>

@@ -1,0 +1,23 @@
+# Example private deny-list for scripts/check_identifying.py.
+#
+# Copy this file to .identifying-denylist.txt at the repo root (that name is
+# gitignored) and replace the examples with your own terms. The pre-commit hook
+# blocks any commit whose staged content contains one of them.
+#
+# Format:
+#   - one term per line; matching is case-insensitive
+#   - lines starting with # are comments; blank lines are ignored
+#   - wrap a line in slashes to make it a regular expression
+#
+# What to list: your name and usernames, your email, the names of people in
+# your notes, your school, employer, city, course codes, project names, and
+# anything else you would not want published. Built-in patterns already catch
+# home-directory paths, claude.ai artifact links and most email addresses.
+#
+# Fictional examples:
+Jordan Example
+jexample42
+Riverside State University
+Professor Placeholder
+/\bCHEM ?210\b/
+Project Nightjar

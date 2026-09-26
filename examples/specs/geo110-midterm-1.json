@@ -1,0 +1,98 @@
+{
+  "course": {
+    "title": "GEO 110 Midterm 1",
+    "prefix": "geo110-mt1",
+    "tag": "geo110",
+    "exam_key": "geo110_mt1",
+    "wiki_dir": "wiki/courses/geo110",
+    "created": "2026-09-26",
+    "today": "2026-09-26",
+    "tags": ["geo110", "exam-prep"],
+    "exam": {"when": "2026-10-20T10:00:00-07:00", "label": "Tue 20 Oct, 10:00", "name": "GEO 110 Midterm 1"},
+    "cols": ["L1–L2 Materials", "L3–L4 Structure"],
+    "related": ["geo110"],
+    "bank_intro": "Three questions per item, drawn from the concept pages. Answer cold before rereading the page.",
+    "tracker_intro": "Tracks the four Midterm 1 items from first pre-test to mastered.",
+    "loop": "1. Pre-test each item cold in the quiz.\n2. Reread the page for anything under 80%.\n3. Post-test with new questions at least a day later.\n4. Repeat until every item is mastered.",
+    "grading": "Two parts per question: the answer is marked Y or N, and the reasoning is scored 1–5 (3 is a pass). An attempt passes at 80% on both.",
+    "plan": [
+      {"date": "2026-09-28", "dow": "Mon", "mon": "Sep", "head": "Pre-test materials", "items": ["Pre-test rock cycle", "Pre-test Mohs hardness"]},
+      {"date": "2026-09-30", "dow": "Wed", "mon": "Sep", "head": "Pre-test structure", "items": ["Pre-test superposition", "Pre-test plate boundaries"]},
+      {"date": "2026-10-13", "dow": "Tue", "mon": "Oct", "head": "Post-test anything not mastered", "items": ["Post-test every weak or shaky item"]}
+    ],
+    "schedule_note": "Leave the week before the exam for post-tests only.",
+    "quiz": {
+      "page_title": "GEO 110 Quiz",
+      "eyebrow": "GEO 110 · Midterm 1",
+      "heading": "Earth materials pre-tests",
+      "subject": "GEO 110, an introductory earth-materials course (rocks, minerals, relative dating, plate tectonics)"
+    },
+    "quiz_url": ""
+  },
+  "items": [
+    {
+      "id": "rock-cycle", "title": "Rock cycle", "short": "Rock cycle", "col": 0, "lec": "L1", "mins": 10,
+      "needs": [], "due": "2026-09-28", "format": "mcq",
+      "logic": "Name the process: cooling from melt is igneous, deposition is sedimentary, solid-state change is metamorphic.",
+      "questions": [
+        {"type": "mc", "stem": "Basalt has very small crystals. What does that say about how it formed?",
+         "options": ["It cooled slowly underground", "It cooled quickly at the surface", "It was compacted from sediment", "It was changed by heat without melting"],
+         "answer": "B", "why": "Fast cooling at the surface leaves no time for large crystals to grow."},
+        {"type": "mc", "stem": "Shale is heated and squeezed deep in the crust but never melts. What does it become?",
+         "options": ["Granite", "Sandstone", "Slate", "Basalt"],
+         "answer": "C", "why": "Solid-state change by heat and pressure is metamorphism, and shale becomes slate."},
+        {"type": "tf", "stem": "If a metamorphic rock melts and the melt cools, the result is still metamorphic rock.",
+         "answer": "False", "why": "Rock that crystallises from melt is igneous, whatever it was before."}
+      ],
+      "post": ["New questions from the quiz"]
+    },
+    {
+      "id": "mohs-hardness", "title": "Mohs hardness", "short": "Mohs", "col": 0, "lec": "L2", "mins": 10,
+      "needs": [], "due": "2026-09-28", "format": "mcq",
+      "logic": "A mineral scratches anything lower on the scale; the numbers are an order, not a ratio.",
+      "questions": [
+        {"type": "mc", "stem": "A mineral scratches glass but is scratched by quartz. Which could it be?",
+         "options": ["Calcite", "Fluorite", "Orthoclase", "Topaz"],
+         "answer": "C", "why": "Glass is about 5.5 and quartz 7, so it lies between: orthoclase at 6."},
+        {"type": "mc", "stem": "Your fingernail scratches a mineral. Which is it most likely to be?",
+         "options": ["Gypsum", "Apatite", "Quartz", "Corundum"],
+         "answer": "A", "why": "A fingernail is about 2.5, so it only scratches minerals below that, like gypsum at 2."},
+        {"type": "tf", "stem": "Diamond (10) is exactly twice as hard as fluorite (5).",
+         "answer": "False", "why": "The Mohs scale is ordinal: it ranks minerals but says nothing about ratios."}
+      ],
+      "post": ["New questions from the quiz"]
+    },
+    {
+      "id": "superposition", "title": "Superposition", "short": "Superposition", "col": 1, "lec": "L3", "mins": 10,
+      "needs": ["rock-cycle"], "due": "2026-09-30", "format": "mcq",
+      "logic": "Undisturbed layers get younger upwards; anything that cuts a layer is younger than it.",
+      "questions": [
+        {"type": "mc", "stem": "A fault cuts layers A (bottom), B and C (top) but not layer D above them. Which order is right, oldest first?",
+         "options": ["Fault, A, B, C, D", "A, B, C, fault, D", "D, C, B, A, fault", "A, fault, B, C, D"],
+         "answer": "B", "why": "The fault cuts A–C so it is younger than them, and D is undisturbed so it came after the fault."},
+        {"type": "tf", "stem": "Superposition tells you a layer is 40 million years old.",
+         "answer": "False", "why": "Superposition gives relative ages only; ages in years need radiometric dating."},
+        {"type": "mc", "stem": "You find sedimentary layers tilted at 45°. What does original horizontality tell you?",
+         "options": ["They were deposited on a slope", "They were tilted after they formed", "They are metamorphic", "The top layer is the oldest"],
+         "answer": "B", "why": "Sediment is laid down flat, so tilting happened after deposition."}
+      ],
+      "post": ["New questions from the quiz"]
+    },
+    {
+      "id": "plate-boundaries", "title": "Plate boundaries", "short": "Boundaries", "col": 1, "lec": "L4", "mins": 12,
+      "needs": ["rock-cycle"], "due": "2026-09-30", "format": "mcq",
+      "logic": "Ask whether the plates move apart, together or past each other, and what happens to crust.",
+      "questions": [
+        {"type": "mc", "stem": "Where is new oceanic crust made?",
+         "options": ["Transform faults", "Ocean trenches", "Mid-ocean ridges", "Continental collisions"],
+         "answer": "C", "why": "At divergent margins such as mid-ocean ridges, rising magma forms new crust."},
+        {"type": "mc", "stem": "Oceanic crust meets continental crust at a convergent margin. What happens?",
+         "options": ["The continental plate subducts", "The oceanic plate subducts", "Both plates rise into mountains", "They slide past each other"],
+         "answer": "B", "why": "Oceanic crust is denser, so it sinks beneath the continent."},
+        {"type": "tf", "stem": "Crust is neither created nor destroyed at a transform boundary.",
+         "answer": "True", "why": "At transform margins the plates slide past each other without making or consuming crust."}
+      ],
+      "post": ["New questions from the quiz"]
+    }
+  ]
+}

@@ -1,0 +1,122 @@
+---
+name: obsidian-dashboard-paper
+description: Build or update a paper-graded exam study dashboard in the wiki, inside Obsidian, for work where the user does maths or draws their reasoning by hand - one worked problem per concept with a folded step rubric, status stored as page properties, a Dataview dashboard note, and grading from photos of their work. Use when the user says /obsidian-dashboard-paper, asks for a study dashboard for a maths-heavy exam, or sends a photo of a pre-test to grade. For multiple-choice or written-answer exams use obsidian-dashboard-digital instead.
+---
+
+# /obsidian-dashboard-paper
+
+For exams where the work is maths or drawn reasoning, done on paper or a tablet
+and graded from a photo. Turns a course sub-cluster (e.g.
+`wiki/<university>/<course>/`) into a study loop in Obsidian: pre-test every item
+cold, grade it, drill what is weak, post-test, repeat. Its sibling,
+`obsidian-dashboard-digital`, is for everything that can be answered by typing:
+it shares this build script and adds an in-page quiz artifact.
+
+Arguments: the course and exam, e.g. `/obsidian-dashboard-paper chem101 midterm 2`.
+With no argument, ask which course and exam.
+
+## Where things live
+
+- The kit's scripts and templates are in this skill folder.
+- **Your specs are private**: keep them in `specs/` at the brain root (outside
+  the kit if the kit is a submodule), never inside this folder. They hold your
+  course, dates and questions.
+- A spec's `wiki_dir` is relative to the brain root (the `BRAIN_ROOT` variable,
+  or the nearest folder above the spec that contains `wiki/`).
+- `brain.config.json` at the brain root (copy `brain.config.example.json`)
+  gives your Obsidian vault name so the build can print an `obsidian://` link.
+
+## What it produces
+
+For a spec with `prefix` P, inside the course folder:
+
+| Page | Holds |
+| --- | --- |
+| item pages (existing concept/source pages) | properties: `<exam_key>: true`, `order`, `lecture`, `mastery`, `pretest_due`, `pretest_score`, `posttest_score`, `last_graded`, `pretest` (link to its questions), `needs` (prerequisite links) |
+| `P-pretest-bank` | every item's problem or questions; rubrics and answers in folded `[!check]-` callouts |
+| `P-mastery` | the loop, status rules, a Dataview status table, the attempt log, the dated schedule as `[due::]` tasks |
+| `P-dashboard` | DataviewJS countdown and status bar, do-next list, mermaid map coloured by status, status table, schedule, embedded attempt log |
+
+Status lives only in item properties and the attempt log. Nothing is kept in
+browser storage or an artifact.
+
+## Steps
+
+1. **Check the wiki is ready.** Run `/ingest` first if `raw/` has anything
+   outside `raw/ingested/`. Read the course hub, its exam guide, the syllabus
+   page, past exams and practice questions. Settle three things and say them
+   before writing: the **exam date and time**, the **scope** (by lecture, not
+   textbook chapter; mark anything uncertain as its own "scope unconfirmed"
+   column rather than dropping it), and the **format** (worked problems or
+   multiple choice).
+2. **Pick the items.** One item per concept page in scope. Item ids are page
+   filenames. Create a page only when a needed idea has none (for example the
+   prerequisite maths skills a course assumes); give it rule, worked example
+   and trap. Draw `needs` edges from what each item builds on.
+3. **Write the questions** from the wiki pages, never from memory:
+   - `format: "steps"` for worked-problem exams: one new problem per item, a
+     rubric of 3–6 binary steps written logic-first (a plain sentence per step,
+     the expected result beside it). Check every expected result by hand.
+   - Never use held-back mock exams, and avoid figures the wiki records as
+     contested (check each page's Contradictions section).
+   - Honour course rules recorded on the hub (for instance a ban on generative
+     AI for assignments: study questions are fine, graded assignments are off
+     limits).
+4. **Write the spec** as `specs/<course>-<exam>.json` at the brain root. The
+   kit's example (`examples/specs/`) shows the shape. Use `format: "steps"`
+   here; multiple-choice specs belong to the digital skill. Course fields:
+   `title`, `prefix`, `tag`, `exam_key`, `wiki_dir`, `created`, `today`, `tags`,
+   `exam` {`when` ISO with offset, `label`, `name`}, `cols`, `related`,
+   `bank_intro`, `tracker_intro`, `loop`, `grading`, `plan`
+   [{`date`,`dow`,`mon`,`head`,`items`}], `schedule_note`, and optional
+   `bank_name` / `tracker_name` / `dashboard_name` overrides. Item fields: `id`,
+   `title` (also the bank heading the `pretest` link points at), `short` (map
+   label), `col`, `lec`, `mins`, `needs`, `logic`, `due`, `format`, then `q` +
+   `rubric` [[step, expected], ...] or `questions`, optional `post`, optional
+   `create_page` {`title`,`tags`,`body`}.
+5. **Build**: `python <this skill folder>/build_dashboard.py specs/<file>.json`
+   from the brain root. It is safe to rerun: existing `mastery` and scores are
+   kept, and the attempt log is carried over. It asserts every `needs` target
+   exists.
+6. **Wire it into the wiki** per CLAUDE.md: links both ways (hub Analyses, exam
+   guide, practice-question page), index entries for the three pages, and a log
+   entry. Run a broken-link check on the three new pages.
+7. **Open it** with the `obsidian://` link the build prints (needs
+   `brain.config.json`). Dataview must be installed with JavaScript queries on.
+8. **Commit** (if Auto-commit is on, per Version control in `CLAUDE.md`): the
+   spec, the generated pages, edited item and hub pages, index and log, by path,
+   with the log heading as the message. Rebuilds commit the same way. Never push.
+
+## Grading an attempt
+
+When the user sends a photo or a result for an item:
+
+1. Mark each step or question Y or N against the folded rubric or answers. For
+   steps, a step passes only if its claim is true and it uses the right tool.
+   Say which failed and why, and whether the miss is really a prerequisite.
+2. Append a row to the `P-mastery` attempt log:
+   `| YYYY-MM-DD | [[item]] | pre-test or the post-test source | YYNY | 75% | note |`.
+3. Update the item page's properties: `pretest_score` or `posttest_score`,
+   `last_graded`, and `mastery` by the rules below. The dashboard updates itself.
+4. For a post-test, use a different problem from the item's `post` list (problem
+   sets, sections, unheld past exams), never a held-back mock.
+5. Log the grading in `wiki/log.md`, then **commit** (if Auto-commit is on): the
+   tracker, the item page and `log.md`, by path, with the log heading as the
+   message. Never push.
+
+Status rules: **untested** (no attempt), **weak** (latest under 80%),
+**shaky** (one attempt at 80%+), **mastered** (two at 80%+ on different
+questions, 24 hours or more apart).
+
+## Pitfalls
+
+- A `|` inside maths breaks a markdown table: write `\lvert x\rvert`.
+- Spec strings with LaTeX written from Python must be raw strings, or `\t`,
+  `\f`, `\b` turn into control characters.
+- Dataview can't query rows of a markdown table, which is why status is in
+  properties and the table is a query.
+- A learning-management system's Files export often holds only the Files area.
+  Lecture slides posted in modules or pages can be missing from it; check before
+  assuming the scope is covered.
+- `build_dashboard.py` is shared with `obsidian-dashboard-digital`; keep the two
+  copies identical.
