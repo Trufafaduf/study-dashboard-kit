@@ -91,8 +91,11 @@ my-brain/                        private repo
   wiki/
 ```
 
-Use `scripts/link-kit.ps1` (Windows) to create those links — see the script's
-header for usage. In practice you ask
+Use `scripts/link-kit.ps1` (Windows, `powershell -ExecutionPolicy Bypass -File
+scripts\link-kit.ps1`, junctions and hard links) or `scripts/link-kit.sh`
+(macOS/Linux, symlinks) to create those links — see each script's header for
+usage; both are idempotent, safe to rerun after `git submodule update
+--remote`. In practice you ask
 Claude ("make a study dashboard for `<course>`") and it runs the builders for
 you; see each skill's `SKILL.md` for the full workflow.
 
