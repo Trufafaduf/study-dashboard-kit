@@ -18,7 +18,12 @@ with open(hook, "w", newline="\n") as f:
     f.write("#!/bin/sh\n"
             "# Installed by scripts/install_hooks.py: block commits containing identifying information.\n"
             "top=$(git rev-parse --show-toplevel)\n"
-            "PY=$(command -v python3 || command -v python)\n"
+            "# Use the first Python that actually runs: on Windows python3 can be a Store stub.\n"
+            "for PY in python3 python py; do\n"
+            "  command -v \"$PY\" >/dev/null 2>&1 && \"$PY\" -c '' >/dev/null 2>&1 && break\n"
+            "  PY=\n"
+            "done\n"
+            "[ -n \"$PY\" ] || { echo \"pre-commit: no working Python, so the identifying-info check can't run\" >&2; exit 1; }\n"
             "exec \"$PY\" \"$top/scripts/check_identifying.py\"\n")
 os.chmod(hook, os.stat(hook).st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 print("installed", hook)

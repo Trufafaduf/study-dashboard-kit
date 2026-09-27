@@ -34,11 +34,12 @@ For a spec with `prefix` P, inside the course folder:
 | --- | --- |
 | item pages (existing concept/source pages) | properties: `<exam_key>: true`, `order`, `lecture`, `mastery`, `pretest_due`, `pretest_score`, `posttest_score`, `last_graded`, `pretest` (link to its questions), `needs` (prerequisite links) |
 | `P-pretest-bank` | every item's problem or questions; rubrics and answers in folded `[!check]-` callouts |
-| `P-mastery` | the loop, status rules, a Dataview status table, the attempt log, the dated schedule as `[due::]` tasks |
-| `P-dashboard` | DataviewJS countdown and status bar, do-next list, mermaid map coloured by status, status table, schedule, embedded attempt log |
+| `P-mastery` | the loop, status rules, a Dataview status table, the attempt log, a **Review** checklist (one task per reading, slide deck, handout, problem set or past exam, linked to the file and its wiki page), the dated schedule as `[due::]` tasks |
+| `P-dashboard` | DataviewJS countdown and status bar, do-next list (reviews that are due included), mermaid map coloured by status, status table, **To review** (progress bar and the checklist, tickable in place), schedule, embedded attempt log |
 
-Status lives only in item properties and the attempt log. Nothing is kept in
-browser storage or an artifact.
+Status lives only in item properties, the attempt log and the tracker's
+checkboxes. A rebuild keeps ticked boxes, both review and schedule tasks.
+Nothing is kept in browser storage or an artifact.
 
 ## Steps
 
@@ -68,16 +69,26 @@ browser storage or an artifact.
    `title`, `prefix`, `tag`, `exam_key`, `wiki_dir`, `created`, `today`, `tags`,
    `exam` {`when` ISO with offset, `label`, `name`}, `cols`, `related`,
    `bank_intro`, `tracker_intro`, `loop`, `grading`, `plan`
-   [{`date`,`dow`,`mon`,`head`,`items`}], `schedule_note`, and optional
-   `bank_name` / `tracker_name` / `dashboard_name` overrides. Item fields: `id`,
+   [{`date`,`dow`,`mon`,`head`,`items`}], `schedule_note`, `review` (below),
+   and optional `review_intro` and `bank_name` / `tracker_name` /
+   `dashboard_name` overrides. Item fields: `id`,
    `title` (also the bank heading the `pretest` link points at), `short` (map
    label), `col`, `lec`, `mins`, `needs`, `logic`, `due`, `format`, then `q` +
    `rubric` [[step, expected], ...] or `questions`, optional `post`, optional
    `create_page` {`title`,`tags`,`body`}.
+
+   **Review list.** `review` is [{`group`, `items`}], one group per kind of
+   material (lecture slides, readings, sections, problem sets, past exams).
+   Each item has a stable `id` (the tick is kept by it across rebuilds),
+   `title`, `file` (path from the brain root, usually in `raw/ingested/`; take
+   it from the source page's `raw_files`) or `url`, `page` (the wiki source
+   page), optional `due` and a short `note`. List every artifact in scope, not
+   only the ones already in a plan task. Leave out held-back mocks, so the
+   checklist never invites opening one; say so in `review_intro`.
 5. **Build**: `python <this skill folder>/build_dashboard.py specs/<file>.json`
    from the brain root. It is safe to rerun: existing `mastery` and scores are
    kept, and the attempt log is carried over. It asserts every `needs` target
-   exists.
+   exists, and every review item's file and page.
 6. **Wire it into the wiki** per CLAUDE.md: links both ways (hub Analyses, exam
    guide, practice-question page), index entries for the three pages, and a log
    entry. Run a broken-link check on the three new pages.
@@ -90,6 +101,12 @@ browser storage or an artifact.
 ## Grading an attempt
 
 When the user sends a photo or a result for an item:
+
+Partial work is a valid attempt. Grade whatever was sent: a step or question
+left blank is marked N, like a wrong one. Never ask for the rest first, and tell
+the user to stop where they're stuck rather than guess, so the marks show what
+they actually know. Write the study instructions in `loop` and `grading` the
+same way ("write the steps you can"), never "show every step".
 
 1. Mark each step or question Y or N against the folded rubric or answers. For
    steps, a step passes only if its claim is true and it uses the right tool.

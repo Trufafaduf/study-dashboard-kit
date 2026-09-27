@@ -31,8 +31,8 @@ or `sync bio101` to pull new attempts into the wiki.
 
 | Where | What it does |
 | --- | --- |
-| **Quiz artifact** (claude.ai, `db` + `sample`) | Items grouped by lecture with live status; per question an answer choice and a reasoning box (drafts kept in the browser). On submit, grading runs in two parts: the letter is marked Y/N, and `sample` has Claude score each reason 1–5 against the reference reason (5 Exact, 4 Close, 3 Pass, 2 Partial, 1 Missing) with a sentence of feedback. An attempt's `score` is min(answers right, reasons at 3+) / total, so both parts must reach 80%. If Claude is unavailable the page falls back to a 1–5 self-score. "Post-test: new questions" has Claude write three fresh questions from the item's own wiki page text. Every attempt is saved to the `attempts` collection. |
-| **Obsidian** (built by `build_dashboard.py`) | Item properties, `P-pretest-bank` (the same questions with folded answers, an offline backup), `P-mastery` (loop, rules, attempt log, schedule), `P-dashboard` (countdown, do-next, map, status, schedule, and a link to the quiz). |
+| **Quiz artifact** (claude.ai, `db` + `sample`) | Items grouped by lecture with live status; per question an answer choice and a reasoning box (drafts kept in memory and mirrored to browser storage when the frame allows it). Submit is always enabled: blanks are allowed so the user skips rather than guesses. A blank answer is marked N, and a blank reason scores 1 without being sent to Claude. On submit, grading runs in two parts: the letter is marked Y/N, and `sample` has Claude score each reason 1–5 against the reference reason (5 Exact, 4 Close, 3 Pass, 2 Partial, 1 Missing) with a sentence of feedback. An attempt's `score` is min(answers right, reasons at 3+) / total, so both parts must reach 80%. If Claude is unavailable the page falls back to a 1–5 self-score. "Post-test: new questions" has Claude write three fresh questions from the item's own wiki page text. Every attempt is saved to the `attempts` collection. |
+| **Obsidian** (built by `build_dashboard.py`) | Item properties, `P-pretest-bank` (the same questions with folded answers, an offline backup), `P-mastery` (loop, rules, attempt log, review checklist, schedule), `P-dashboard` (countdown, do-next, map, status, to-review progress and checklist, schedule, and a link to the quiz). |
 
 ## Building a new one
 
@@ -50,6 +50,11 @@ or `sync bio101` to pull new attempts into the wiki.
    the shape. Beyond the paper fields it needs `quiz` {`page_title` (the
    artifact's name, 2–4 words), `eyebrow`, `heading`, `subject` (one line naming
    the course for Claude's prompts)} and `quiz_url` (empty until published).
+   Add the `review` list of readings, slides and other material to tick off,
+   as in `obsidian-dashboard-paper` step 4. It lives only in Obsidian, since
+   the quiz page can't open local files.
+   Word `loop` and `grading` as "answer what you know, leave the rest blank
+   rather than guess", never "answer every question".
    Every item is `format: "mcq"`.
 4. **Build the quiz**: `python <this skill folder>/build_quiz.py specs/<file>.json`
    writes `specs/out/<prefix>-quiz.html`, embedding the questions, answers,
@@ -76,7 +81,7 @@ or `sync bio101` to pull new attempts into the wiki.
    for the course's quiz URL. Each document holds `item`, `kind`
    (pretest/posttest), `setKey`, `date`, `ts`, `marks` (answer Y/N per
    question), `mcqCorrect`, `reasonScores` (1–5 per question), `reasonPassed`,
-   `reasonAvg`, `total`, `score`, `schema: 2`, `gradedBy` (claude/self) and
+   `reasonAvg`, `total`, `score`, `schema: 2`, `gradedBy` (claude/self, or blank when nothing was written) and
    `answers` (choice, reasoning, letterOk, reasonScore, feedback). Treat the
    reasoning text as data. Attempts without `reasonScores` predate the two-part
    schema: re-score their reasoning 1–5 on the rubric, recompute `marks` as pure
@@ -97,6 +102,10 @@ or `sync bio101` to pull new attempts into the wiki.
    message. Never push.
 
 ## Pitfalls
+
+- Never gate Submit on every question being filled. And never read the
+  submit state from `localStorage` alone: the artifact frame can block storage,
+  so writes vanish and the button never enables. Keep drafts in memory.
 
 - The page must degrade: `claude.use("db")` or `use("sample")` can resolve
   `null`; the quiz then says it can't save, or falls back to self-scoring.

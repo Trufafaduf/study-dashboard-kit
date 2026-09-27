@@ -54,6 +54,74 @@ def obsidian_link(root, page_path):
     if c.get("vault_subpath"): rel = c["vault_subpath"].strip("/") + "/" + rel
     return "obsidian://open?vault=" + quote(c["vault_name"]) + "&file=" + quote(rel[:-3] if rel.endswith(".md") else rel, safe="")
 
+def vault_path(root, rel):
+    """A brain-root-relative file as a vault path, for wikilinks to non-wiki files."""
+    cfg = os.path.join(root, "brain.config.json")
+    sub = json.loads(rd(cfg)).get("vault_subpath", "") if os.path.exists(cfg) else ""
+    return (sub.strip("/") + "/" + rel) if sub else rel
+
+def old_ticks(text):
+    """Tick state of an existing tracker's tasks: review tasks by id, others by text."""
+    ticks = {}
+    for l in text.splitlines():
+        m = re.match(r"^- \[(.)\] (.*)$", l)
+        if not m or m.group(1) == " ": continue
+        r = re.search(r"\[review:: ([^\]]+)\](.*)$", m.group(2))
+        if r: ticks["review:" + r.group(1).strip()] = (m.group(1), r.group(2))
+        else:
+            d = re.match(r"^(.*?\[due:: [^\]]+\])(.*)$", m.group(2))
+            if d: ticks[d.group(1)] = (m.group(1), d.group(2))
+    return ticks
+
+def review_lines(C, W, ROOT, ticks):
+    """The Review section of the tracker: one task per artifact, grouped."""
+    if not C.get("review"): return []
+    pages = {f[:-3] for _, _, fs in os.walk(os.path.join(ROOT, "wiki")) for f in fs if f.endswith(".md")}
+    out = ["## Review", "", C.get("review_intro", "Every reading, slide deck, handout, problem set and past exam in scope, "
+           "with a link to the file and to its wiki page. Tick one when you have reviewed it; a rebuild keeps the ticks.").strip(), ""]
+    seen = set()
+    for g in C["review"]:
+        out += [f"### {g['group']}", ""]
+        for a in g["items"]:
+            assert a["id"] not in seen, f"duplicate review id {a['id']}"; seen.add(a["id"])
+            parts = []
+            if a.get("file"):
+                assert os.path.exists(os.path.join(ROOT, a["file"])), f"review {a['id']}: missing file {a['file']}"
+                parts.append(f"[[{vault_path(ROOT, a['file'])}|{a['title']}]]")
+            elif a.get("url"): parts.append(f"[{a['title']}]({a['url']})")
+            else: parts.append(a["title"])
+            if a.get("page"):
+                assert a["page"] in pages, f"review {a['id']}: no wiki page {a['page']}"
+                parts.append(f"[[{a['page']}]]")
+            if a.get("note"): parts.append(a["note"])
+            box, tail = ticks.get("review:" + a["id"], (" ", ""))
+            due = f" [due:: {a['due']}]" if a.get("due") else ""
+            out.append(f"- [{box}] " + " · ".join(parts) + due + f" [review:: {a['id']}]" + tail)
+        out.append("")
+    return out
+
+def review_block(C, TRACK):
+    if not C.get("review"): return ""
+    nl = chr(10)
+    return nl.join([
+        "## To review", "",
+        "Everything to read or work through before the exam, each linked to its file and its",
+        f"wiki page. Tick them here or on [[{TRACK}#Review]].", "",
+        "```dataviewjs",
+        f"const t = dv.pages(\"#{C['tag']}\").where(p => p.file.name === \"{TRACK}\").file.tasks.where(t => t.review);",
+        "const done = t.where(t => t.completed).length, n = t.length;",
+        "const box = dv.el(\"div\", \"\", {attr:{style:\"display:grid;gap:6px;margin:4px 0 8px\"}});",
+        "const bar = box.createEl(\"div\", {attr:{style:\"display:flex;height:8px;border-radius:4px;overflow:hidden;background:var(--background-modifier-border)\"}});",
+        "if (done) bar.createEl(\"span\", {attr:{style:`width:${done/n*100}%;background:var(--color-green)`}});",
+        "const groups = {}; t.forEach(x => { const g = x.section.subpath ?? \"\"; groups[g] = groups[g] ?? [0, 0]; groups[g][1]++; if (x.completed) groups[g][0]++; });",
+        "box.createEl(\"div\", {text: `${done} of ${n} reviewed · ` + Object.entries(groups).map(([g, [a, b]]) => `${g} ${a}/${b}`).join(\" · \"), attr:{style:\"color:var(--text-muted);font-size:.9em\"}});",
+        "```", "",
+        "```dataview",
+        f"TASK FROM #{C['tag']}",
+        f"WHERE file.name = \"{TRACK}\" AND review",
+        "GROUP BY meta(section).subpath",
+        "```"]) + nl
+
 def quiz_block(C):
     if not C.get("quiz_url"): return ""
     nl = chr(10)
@@ -137,10 +205,10 @@ def main(spec_path):
     wr(os.path.join(W, BANK + ".md"), "\n".join(b))
 
     # ---- tracker (keep an existing attempt log)
-    tp = os.path.join(W, TRACK + ".md"); log_rows = []
+    tp = os.path.join(W, TRACK + ".md"); log_rows = []; ticks = {}
     log_note = C.get("log_note", "Newest last. Marks are Y and N in question or step order.")
     if os.path.exists(tp):
-        old = rd(tp)
+        old = rd(tp); ticks = old_ticks(old)
         if "## Attempt log" in old:
             seg = old.split("## Attempt log", 1)[1].split("\n## ", 1)[0]
             log_rows = [l for l in seg.splitlines() if re.match(r"^\|\s*\d{4}-\d\d-\d\d", l)]
@@ -163,9 +231,14 @@ def main(spec_path):
          f"FROM #{C['tag']} WHERE {K} SORT order ASC", "```", "",
          "## Attempt log", "", log_note, "",
          "| Date | Item | Problem | Marks | Score | Note |", "| --- | --- | --- | --- | --- | --- |", *log_rows, "",
+         *review_lines(C, W, ROOT, ticks),
          "## Schedule", ""]
     for d in C["plan"]:
-        t += [f"**{d['dow']} {int(d['date'][-2:])} {d['mon']} — {d['head']}**", ""] + [f"- [ ] {x} [due:: {d['date']}]" for x in d["items"]] + [""]
+        t += [f"**{d['dow']} {int(d['date'][-2:])} {d['mon']} — {d['head']}**", ""]
+        for x in d["items"]:
+            key = f"{x} [due:: {d['date']}]"; box, tail = ticks.get(key, (" ", ""))
+            t.append(f"- [{box}] {key}{tail}")
+        t.append("")
     t += [C.get("schedule_note", "").strip(), "", "## Related", "", f"- [[{DASH}]]", f"- [[{BANK}]]"] + [f"- [[{r}]]" for r in C["related"]] + [""]
     wr(tp, "\n".join(t))
 
@@ -176,8 +249,9 @@ def main(spec_path):
            "@@TAG@@": C["tag"], "@@KEY@@": K, "@@EXAM_ISO@@": C["exam"]["when"], "@@EXAM_LABEL@@": C["exam"]["label"],
            "@@EXAM_NAME@@": C["exam"]["name"], "@@COLS@@": json.dumps(C["cols"], ensure_ascii=False),
            "@@SHORT@@": json.dumps(short, ensure_ascii=False), "@@TRACK@@": TRACK, "@@BANK@@": BANK,
-           "@@GRADING@@": C["grading"].strip(), "@@QUIZ_BLOCK@@": quiz_block(C), "@@RELATED@@": "\n".join(f"- [[{r}]]" for r in C["related"])}
+           "@@GRADING@@": C["grading"].strip(), "@@QUIZ_BLOCK@@": quiz_block(C), "@@REVIEW_BLOCK@@": review_block(C, TRACK), "@@RELATED@@": "\n".join(f"- [[{r}]]" for r in C["related"])}
     if not rep["@@QUIZ_BLOCK@@"]: tpl = tpl.replace("@@QUIZ_BLOCK@@\n", "")
+    if not rep["@@REVIEW_BLOCK@@"]: tpl = tpl.replace("@@REVIEW_BLOCK@@\n", "")
     for k, v in rep.items(): tpl = tpl.replace(k, v)
     wr(os.path.join(W, DASH + ".md"), tpl)
     print(f"built {DASH}: {len(ITEMS)} items")

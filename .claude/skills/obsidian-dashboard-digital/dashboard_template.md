@@ -37,12 +37,16 @@ const today = dv.date("today");
 const items = dv.pages("#@@TAG@@").where(p => p["@@KEY@@"]);
 const st = p => p.mastery ?? "untested";
 const due = p => p.pretest_due ? dv.date(p.pretest_due) : null;
+const clean = t => t.text.replace(/\s*\[(due|review|completion):: [^\]]*\]/g, "");
+const reviews = dv.pages("#@@TAG@@").where(p => p.file.name === "@@TRACK@@").file.tasks
+  .where(t => t.review && !t.completed && t.due && dv.date(t.due) <= today);
 const q = [
   ...items.where(p => st(p) === "weak").sort(p => p.order).map(p => [p, "drill what you missed"]),
+  ...reviews.map(t => [null, "review: " + clean(t)]),
   ...items.where(p => st(p) === "untested" && due(p) && due(p) <= today).sort(p => p.order).map(p => [p, "pre-test"]),
   ...items.where(p => st(p) === "shaky").sort(p => p.order).map(p => [p, "post-test on new questions"]),
 ];
-if (q.length) dv.list(q.slice(0, 14).map(([p, what]) => `${p.file.link} — ${what} · ${p.pretest ?? ""}`));
+if (q.length) dv.list(q.slice(0, 14).map(([p, what]) => p ? `${p.file.link} — ${what} · ${p.pretest ?? ""}` : what));
 else dv.paragraph("Nothing due. Pull the next untested item forward.");
 ```
 
@@ -75,11 +79,12 @@ TABLE WITHOUT ID file.link AS Item, lecture AS Lecture, mastery AS Status, prete
 FROM #@@TAG@@ WHERE @@KEY@@ SORT order ASC
 ```
 
+@@REVIEW_BLOCK@@
 ## Schedule
 
 ```dataview
 TASK FROM #@@TAG@@
-WHERE file.name = "@@TRACK@@"
+WHERE file.name = "@@TRACK@@" AND !review
 GROUP BY due
 ```
 
