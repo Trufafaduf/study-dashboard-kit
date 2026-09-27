@@ -109,7 +109,7 @@ th{font:500 11.5px/1.2 var(--sans);letter-spacing:.07em;text-transform:uppercase
     <div>
       <div class="eyebrow" id="eyebrow"></div>
       <h1 id="h1"></h1>
-      <p class="sub">Answer every question in an item and write a line of reasoning for each. Grading has two parts. <b>Answers</b>: each letter is right or wrong. <b>Reasoning</b>: Claude scores each reason 1–5 for how close it is to the course material, and 3 is a pass. An item passes when at least 80% of answers are right <i>and</i> at least 80% of reasons score 3 or more.</p>
+      <p class="sub">Answer what you can in an item, with a line of reasoning for each. Leave blank anything you don't know rather than guess: a blank counts as wrong, and you can submit at any point. Grading has two parts. <b>Answers</b>: each letter is right or wrong. <b>Reasoning</b>: Claude scores each reason 1–5 for how close it is to the course material, and 3 is a pass. An item passes when at least 80% of answers are right <i>and</i> at least 80% of reasons score 3 or more.</p>
     </div>
     <div class="clock" aria-live="polite">
       <div class="eyebrow">Time to the exam</div>
@@ -211,9 +211,14 @@ function openItem(id){
 
 /* ---------- detail ---------- */
 function draftKey(){ return "draft:" + view.item + ":" + view.setKey; }
+// Drafts live in memory and are mirrored to browser storage when it works; storage can be blocked in the frame.
+const drafts = {};
+function getDraft(){ const k = draftKey(); return drafts[k] ??= store.get(k, { c: {}, r: {} }); }
+function saveDraft(d){ store.set(draftKey(), d); }
+function clearDraft(){ delete drafts[draftKey()]; store.del(draftKey()); }
 function renderDetail(){
   const i = BY[view.item], s = statusOf(i.id), el = document.getElementById("detail");
-  const draft = store.get(draftKey(), { c: {}, r: {} });
+  const draft = getDraft();
   const res = view.phase === "result" ? view.result : null;
   const qs = view.questions.map((q, k) => {
     const opts = q.type === "tf" ? ["True", "False"] : q.options;
@@ -248,15 +253,15 @@ function renderDetail(){
     <div class="actions" id="actions"></div>
     <div class="sec"><span class="eyebrow">Your attempts</span>${hist.length ? `<div class="tblwrap"><table><thead><tr><th>Date</th><th>Set</th><th>Answers</th><th>Reasoning 1–5</th><th>Score</th><th>In wiki</th></tr></thead><tbody>${hist.map(a => `<tr><td class="mono">${esc(a.date)}</td><td>${a.kind === "pretest" ? "Pre-test" : "New questions"}</td><td class="marks">${[...a.marks].map(c => c === "Y" ? '<span class="y">Y</span>' : '<span class="x">N</span>').join("")}</td><td class="marks">${Array.isArray(a.reasonScores) ? a.reasonScores.map(x => `<span class="${x >= REASON_PASS ? "y" : "x"}">${x}</span>`).join("") : "–"}</td><td class="mono">${Math.round(a.score*100)}%</td><td>${a.synced ? "yes" : "not yet"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">No attempts yet.</p>`}</div>`;
   if (!res && view.phase === "answer") {
-    el.querySelectorAll("input[type=radio]").forEach(r => r.addEventListener("change", () => { const d = store.get(draftKey(), { c: {}, r: {} }); d.c[r.name.slice(1)] = r.value; store.set(draftKey(), d); updateSubmit(); }));
-    el.querySelectorAll("textarea").forEach(t => t.addEventListener("input", () => { const d = store.get(draftKey(), { c: {}, r: {} }); d.r[t.dataset.k] = t.value; store.set(draftKey(), d); updateSubmit(); }));
+    el.querySelectorAll("input[type=radio]").forEach(r => r.addEventListener("change", () => { const d = getDraft(); d.c[r.name.slice(1)] = r.value; saveDraft(d); updateSubmit(); }));
+    el.querySelectorAll("textarea").forEach(t => t.addEventListener("input", () => { const d = getDraft(); d.r[t.dataset.k] = t.value; saveDraft(d); updateSubmit(); }));
   }
   renderActions();
 }
 function fmt(iso){ return new Date(iso + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }); }
-function ready(){
-  const d = store.get(draftKey(), { c: {}, r: {} });
-  return view.questions.every((_, k) => d.c[k] && (d.r[k] || "").trim().length >= 8);
+function answered(){
+  const d = getDraft();
+  return view.questions.filter((_, k) => d.c[k] || (d.r[k] || "").trim()).length;
 }
 function renderActions(){
   const a = document.getElementById("actions");
@@ -276,19 +281,24 @@ function renderActions(){
 }
 function updateSubmit(){
   const b = document.getElementById("submit"); if (!b) return;
-  const ok = ready(); b.disabled = !ok;
-  document.getElementById("submitnote").textContent = ok ? "" : "Pick an answer and write a reason for every question.";
+  const n = view.questions.length, a = answered();
+  document.getElementById("submitnote").textContent = a === n ? "" : `${a} of ${n} answered. Submit whenever you like: a blank answer or reason just counts as wrong, so skip rather than guess.`;
 }
 
 /* ---------- grading ---------- */
 async function submit(){
-  const d = store.get(draftKey(), { c: {}, r: {} });
-  const answers = view.questions.map((q, k) => ({ choice: d.c[k], reasoning: (d.r[k] || "").trim(), letterOk: d.c[k] === q.answer }));
+  const d = getDraft();
+  const answers = view.questions.map((q, k) => ({ choice: d.c[k] || null, reasoning: (d.r[k] || "").trim(), letterOk: d.c[k] === q.answer }));
+  // A blank reason scores 1 without asking Claude; only written reasons are sent.
+  const blank = a => !a.reasoning;
+  answers.filter(blank).forEach(a => { a.reasonScore = 1; a.reasonOk = false; a.feedback = "Left blank."; });
+  const todo = view.questions.map((q, k) => [q, answers[k]]).filter(([, a]) => !blank(a));
+  if (!todo.length) return finish(answers, "blank");
   view.phase = "grading"; renderDetail();
   let graded = null;
   if (sample) {
-    const payload = view.questions.map((q, k) => ({ question: q.stem, options: q.type === "tf" ? ["True", "False"] : q.options.map((o, j) => LETTERS[j] + ". " + o),
-      correct_answer: q.answer, reference_reason: q.why, student_answer: answers[k].choice, student_reasoning: answers[k].reasoning }));
+    const payload = todo.map(([q, a]) => ({ question: q.stem, options: q.type === "tf" ? ["True", "False"] : q.options.map((o, j) => LETTERS[j] + ". " + o),
+      correct_answer: q.answer, reference_reason: q.why, student_answer: a.choice || "(no answer chosen)", student_reasoning: a.reasoning }));
     const prompt = `You are grading a student's written reasoning on ${DATA.course.subject} exam questions (multiple choice and true/false).
 For each question you get the question, its options, the correct answer, a reference reason from the course material, the student's answer, and the student's reasoning.
 Judge ONLY the reasoning; whether the chosen letter is right is marked separately. Give reason_score, an integer 1-5 for how close the reasoning is to the reference reason, in any words; brevity is fine:
@@ -304,7 +314,7 @@ Questions:
 ${JSON.stringify(payload)}`;
     try {
       const out = await sample.json(prompt, { cache: false });
-      if (Array.isArray(out) && out.length === answers.length && out.every(g => [1,2,3,4,5].includes(Math.round(Number(g && g.reason_score))))) graded = out;
+      if (Array.isArray(out) && out.length === todo.length && out.every(g => [1,2,3,4,5].includes(Math.round(Number(g && g.reason_score))))) graded = out;
       else throw { code: "invalid_json" };
     } catch (e) {
       const hide = ["not_granted","sampling_disabled","not_declared","capability_disabled","capability_removed"];
@@ -316,7 +326,7 @@ ${JSON.stringify(payload)}`;
   } else {
     return selfCheck(answers, "Claude isn't available in this view, so check each reason yourself against the reference.");
   }
-  answers.forEach((a, k) => { a.reasonScore = Math.round(Number(graded[k].reason_score)); a.reasonOk = a.reasonScore >= REASON_PASS; a.feedback = String(graded[k].feedback || ""); });
+  todo.forEach(([, a], k) => { a.reasonScore = Math.round(Number(graded[k].reason_score)); a.reasonOk = a.reasonScore >= REASON_PASS; a.feedback = String(graded[k].feedback || ""); });
   finish(answers, "claude");
 }
 function selfCheck(answers, msg){
@@ -324,6 +334,7 @@ function selfCheck(answers, msg){
   const el = document.getElementById("detail");
   el.querySelectorAll(".q").forEach((node, k) => {
     const q = view.questions[k];
+    if (!answers[k].reasoning) { const box = document.createElement("div"); box.className = "verdict"; box.innerHTML = `<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div><div class="note">Left blank: scored 1.</div>`; node.appendChild(box); return; }
     const box = document.createElement("div"); box.className = "verdict";
     box.innerHTML = `<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div><label class="rl" for="s${k}">How close is your reason? (3 is a pass)</label><select class="sel" id="s${k}" data-k="${k}">${RUBRIC.map(r => `<option value="${r[0]}" ${r[0] === 3 ? "selected" : ""}>${r[0]} · ${r[1]}: ${esc(r[2])}</option>`).join("")}</select>`;
     node.appendChild(box);
@@ -350,7 +361,7 @@ async function finish(answers, gradedBy){
     ...(view.kind === "posttest" ? { questions: view.questions } : {}) };
   const result = { ...rec, saved: false };
   if (db) {
-    try { await db.collection("attempts").doc(view.item + "--" + now.getTime()).set(rec); result.saved = true; store.del(draftKey()); }
+    try { await db.collection("attempts").doc(view.item + "--" + now.getTime()).set(rec); result.saved = true; clearDraft(); }
     catch (e) { result.saveError = e.code === "quota_exceeded" ? "the store is full." : "the save failed; try submitting again later."; }
   }
   view.phase = "result"; view.result = result; renderDetail(); renderList(); summary();
