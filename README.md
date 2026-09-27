@@ -48,6 +48,19 @@ at least 24 hours apart.
    creates an empty `.identifying-denylist.txt` (gitignored); add your own
    terms to it, following `.identifying-denylist.example.txt`.
 
+### macOS, Linux and Windows
+
+Everything here runs on all three; CI tests macOS, Ubuntu and Windows on
+Python 3.9 and 3.12. Two differences:
+
+- **Python command.** Commands in this README say `python`. On macOS and most
+  Linux systems that is `python3` (macOS ships it with the Xcode command-line
+  tools: `xcode-select --install`). The git hook finds either on its own.
+- **Linking.** Windows uses `scripts/link-kit.ps1` (junctions and hard links,
+  no admin rights needed); macOS and Linux use `scripts/link-kit.sh`
+  (symlinks). If your shell says "permission denied", run it as
+  `sh scripts/link-kit.sh`.
+
 ## Using it standalone
 
 `examples/` is itself a tiny brain: it has its own `wiki/` (two fictional
