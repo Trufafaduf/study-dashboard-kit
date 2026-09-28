@@ -3,7 +3,7 @@
     python build_quiz.py specs/<name>.json
 
 Writes out/<prefix>-quiz.html with every item's questions, answers and reasons,
-plus any fixed post-test set ("post_bank") and the text of the item's wiki page
+plus any fixed post-test sets ("post_bank" / "post_banks") and the text of the item's wiki page
 (for Claude to write post-test questions from). Publish it with the Artifact tool, capabilities {db: {}, sample: {}}.
 
 Output goes to an out/ folder next to the spec (gitignored: the page embeds the
@@ -11,7 +11,7 @@ answers). Wiki paths resolve as in build_dashboard.py.
 """
 import json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from build_dashboard import wiki_dir
+from build_dashboard import wiki_dir, post_banks
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PAGE_CHARS = 7000
@@ -32,7 +32,7 @@ def main(spec_path):
     for i in S["items"]:
         assert i["format"] == "mcq", f"{i['id']}: the digital quiz takes mcq items only"
         items.append(dict(id=i["id"], title=i["title"], col=i["col"], lec=i["lec"], mins=i["mins"], due=i["due"],
-                          logic=i["logic"], questions=i["questions"], post_bank=i.get("post_bank"),
+                          logic=i["logic"], questions=i["questions"], post_banks=post_banks(i),
                           page=page_text(os.path.join(W, i["id"] + ".md"))))
     data = dict(course=dict(prefix=C["prefix"], title=C["title"], eyebrow=C["quiz"]["eyebrow"], heading=C["quiz"]["heading"],
                             subject=C["quiz"]["subject"], exam=C["exam"], cols=C["cols"]), items=items)

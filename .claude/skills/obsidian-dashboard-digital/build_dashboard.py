@@ -6,8 +6,9 @@ Writes, inside the spec's wiki folder:
   - properties on every item page (status fields are preserved if already set)
   - pages for items that carry "create_page" and do not exist yet
   - <prefix>-pretest-bank.md     problems, with answers/rubrics in folded callouts
-  - <prefix>-posttest-bank.md    only when an item has "post_bank" (a fixed
-                                  post-test set), in the same format
+  - <prefix>-posttest-bank.md    only when an item has "post_bank" or
+                                  "post_banks" (fixed post-test sets), in the
+                                  same format
   - <prefix>-mastery.md          loop, rules, status table, attempt log, schedule
                                   (an existing attempt log is kept)
   - <prefix>-dashboard.md        Dataview countdown, do-next, map, table, schedule
@@ -25,6 +26,12 @@ from urllib.parse import quote
 STATUS_KEYS = ("mastery", "pretest_score", "posttest_score", "last_graded")
 MANAGED = ("{k}", "order", "lecture", "mastery", "pretest_due", "pretest_score",
            "posttest_score", "last_graded", "needs", "pretest")
+
+def post_banks(i):
+    """An item's fixed post-test sets: "post_bank" (one set) and/or "post_banks" (a list),
+    each with a setKey. The first is "post-bank", so attempts saved under it still match."""
+    bs = ([i["post_bank"]] if i.get("post_bank") else []) + list(i.get("post_banks", []))
+    return [dict(b, key=b.get("key") or ("post-bank" if k == 0 else f"post-bank-{k + 1}")) for k, b in enumerate(bs)]
 
 def rd(p):
     with open(p, encoding="utf-8") as f: return f.read()
@@ -148,7 +155,7 @@ def main(spec_path):
     S = json.loads(rd(spec_path))
     C = S["course"]; ITEMS = S["items"]; W, ROOT = wiki_dir(C, spec_path); K = C["exam_key"]; TODAY = C["today"]
     P = C["prefix"]; BANK = C.get("bank_name", f"{P}-pretest-bank"); TRACK = C.get("tracker_name", f"{P}-mastery"); DASH = C.get("dashboard_name", f"{P}-dashboard")
-    PBANK = C.get("post_bank_name", f"{P}-posttest-bank"); HAS_PB = any(i.get("post_bank") for i in ITEMS)
+    PBANK = C.get("post_bank_name", f"{P}-posttest-bank"); HAS_PB = any(post_banks(i) for i in ITEMS)
     BY = {i["id"]: i for i in ITEMS}
     for i in ITEMS:
         for n in i.get("needs", []): assert n in BY, f"{i['id']} needs unknown {n}"
@@ -208,7 +215,7 @@ def main(spec_path):
             else:
                 b += question_lines(i["questions"], i["logic"])
             post = list(i.get("post", []))
-            if i.get("post_bank"): post.append(f"[[{PBANK}#{i['title']}]] ({i['post_bank']['label']})")
+            if post_banks(i): post.append(f"[[{PBANK}#{i['title']}]] ({'; '.join(pb['label'] for pb in post_banks(i))})")
             if post: b += ["", "Post-test from: " + "; ".join(post) + "."]
             b.append("")
     b += ["## Related", "", f"- [[{TRACK}]]", f"- [[{DASH}]]"] + ([f"- [[{PBANK}]]"] if HAS_PB else []) + [f"- [[{r}]]" for r in C["related"]] + [""]
@@ -221,13 +228,14 @@ def main(spec_path):
              C.get("post_bank_intro", "Fixed post-test questions, one set per item, answers folded. Take an item's set "
                    "after its pre-test, at least a day later.").strip(), ""]
         for c, name in enumerate(C["cols"]):
-            its = [x for x in ITEMS if x["col"] == c and x.get("post_bank")]
+            its = [x for x in ITEMS if x["col"] == c and post_banks(x)]
             if not its: continue
             b += [f"## {name}", ""]
             for i in its:
-                pb = i["post_bank"]
-                b += [f"### {i['title']}", "", f"[[{i['id']}]] · {pb['label']}" + (f" · {pb['source']}" if pb.get("source") else ""), ""]
-                b += question_lines(pb["questions"], i["logic"]) + [""]
+                b += [f"### {i['title']}", ""]
+                for pb in post_banks(i):
+                    b += [f"[[{i['id']}]] · **{pb['label']}**" + (f" · {pb['source']}" if pb.get("source") else ""), ""]
+                    b += question_lines(pb["questions"], i["logic"]) + [""]
         b += ["## Related", "", f"- [[{BANK}]]", f"- [[{TRACK}]]", f"- [[{DASH}]]"] + [f"- [[{r}]]" for r in C["related"]] + [""]
         wr(os.path.join(W, PBANK + ".md"), "\n".join(b))
 

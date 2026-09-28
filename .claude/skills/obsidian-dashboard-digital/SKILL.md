@@ -73,6 +73,9 @@ or `sync bio101` to pull new attempts into the wiki.
    (saved with `setKey: "post-bank"`, a different set from the pre-test for the
    mastery rule), and the build writes `P-posttest-bank` with answers folded.
    Take the questions and reasons from the source's own key, never from memory.
+   For more than one fixed set, add `post_banks` (a list in the same shape).
+   Each set gets its own `setKey` (`post-bank`, `post-bank-2`, …) and counts as
+   a separate set for the mastery rule.
 4. **Build the quiz**: `python <this skill folder>/build_quiz.py specs/<file>.json`
    writes `specs/out/<prefix>-quiz.html`, embedding the questions, answers,
    reasons and each item's wiki page text (up to 7,000 characters, for post-test

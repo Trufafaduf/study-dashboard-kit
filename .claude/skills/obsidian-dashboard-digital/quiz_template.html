@@ -202,19 +202,24 @@ function renderList(){
   }).join("")).join("");
   el.querySelectorAll(".item").forEach(b => b.addEventListener("click", () => openItem(b.dataset.id)));
 }
-function openItem(id, post){
+// Fixed post-test sets ("post_bank"/"post_banks" in the spec), each with its own setKey.
+const banks = id => (BY[id] && BY[id].post_banks) || [];
+const bankOf = v => v.kind === "posttest" ? banks(v.item).find(b => b.key === v.setKey) : null;
+function openItem(id, key){
   current = id; store.set("current", id);
-  view = post && BY[id].post_bank
-    ? { item: id, setKey: "post-bank", kind: "posttest", questions: BY[id].post_bank.questions, phase: "answer" }
+  const pb = key && banks(id).find(b => b.key === key);
+  view = pb
+    ? { item: id, setKey: pb.key, kind: "posttest", questions: pb.questions, phase: "answer" }
     : { item: id, setKey: "bank", kind: "pretest", questions: BY[id].questions, phase: "answer" };
   renderList(); renderDetail();
   if (matchMedia("(max-width: 820px)").matches) document.getElementById("detail").scrollIntoView({ behavior: "auto", block: "start" });
 }
-// A fixed post-test set ("post_bank" in the spec) counts as a different question set from the pre-test.
+// Each fixed post-test set counts as a different question set from the pre-test and from each other.
 function setName(a){
   if (a.kind === "pretest") return "Pre-test";
-  if (a.setKey === "post-bank") return (BY[a.item] && BY[a.item].post_bank && BY[a.item].post_bank.label) || "Post-test set";
-  return "New questions";
+  const pb = bankOf(a);
+  if (pb) return pb.label;
+  return String(a.setKey).startsWith("post-bank") ? "Post-test set" : "New questions";
 }
 
 /* ---------- detail ---------- */
@@ -225,7 +230,7 @@ function getDraft(){ const k = draftKey(); return drafts[k] ??= store.get(k, { c
 function saveDraft(d){ store.set(draftKey(), d); }
 function clearDraft(v = view){ const k = draftKey(v); delete drafts[k]; store.del(k); }
 function renderDetail(){
-  const i = BY[view.item], s = statusOf(i.id), el = document.getElementById("detail");
+  const i = BY[view.item], s = statusOf(i.id), el = document.getElementById("detail"), vb = bankOf(view);
   const draft = getDraft();
   const res = view.phase === "result" ? view.result : null;
   const qs = view.questions.map((q, k) => {
@@ -251,9 +256,9 @@ function renderDetail(){
   }).join("");
   const hist = itemAttempts(i.id).slice().reverse();
   el.innerHTML = `
-    <div class="dhead"><div><div class="eyebrow">${esc(i.lec)} · ${view.kind === "pretest" ? "pre-test" : view.setKey === "post-bank" ? "post-test · " + esc(i.post_bank.label) : "post-test, new questions"}</div><h2 style="margin-top:6px">${esc(i.title)}</h2></div>
+    <div class="dhead"><div><div class="eyebrow">${esc(i.lec)} · ${view.kind === "pretest" ? "pre-test" : vb ? "post-test · " + esc(vb.label) : "post-test, new questions"}</div><h2 style="margin-top:6px">${esc(i.title)}</h2></div>
       <span class="pill s-${s}"><span class="dot"></span>${s}</span></div>
-    <div class="meta"><span>${view.questions.length} questions</span><span>About ${i.mins} minutes</span><span>Pre-test by ${fmt(i.due)}</span>${view.kind === "pretest" ? "" : view.setKey === "post-bank" ? (i.post_bank.source ? `<span>${esc(i.post_bank.source)}</span>` : "") : "<span>Written by Claude from your wiki page</span>"}</div>
+    <div class="meta"><span>${view.questions.length} questions</span><span>About ${i.mins} minutes</span><span>Pre-test by ${fmt(i.due)}</span>${view.kind === "pretest" ? "" : vb ? (vb.source ? `<span>${esc(vb.source)}</span>` : "") : "<span>Written by Claude from your wiki page</span>"}</div>
     ${res ? `<div class="sec"><span class="eyebrow">Result</span><div class="score">Answers ${res.mcqCorrect}/${res.total} · Reasoning ${res.reasonPassed}/${res.total} at 3+</div>
       <p class="note" style="margin:6px 0 0">Average reasoning ${res.reasonAvg.toFixed(1)}/5. ${res.score >= 0.8 ? "Pass on both parts." : "Not a pass yet: " + [res.mcqCorrect / res.total < 0.8 ? "answers under 80%" : "", res.reasonPassed / res.total < 0.8 ? "under 80% of reasons at 3+" : ""].filter(Boolean).join(" and ") + ". Reread the reference reasons below, then try new questions."} ${res.gradedBy === "self" ? "Reasons were self-checked." : ""} ${res.saved ? "Saved." : db ? "Not saved: " + esc(res.saveError || "") : "Not saved in this view."}</p></div>
       <div class="logic"><span class="eyebrow" style="display:block;margin-bottom:6px">The logic in one line</span>${esc(i.logic)}</div>` : ""}
@@ -274,19 +279,19 @@ function answered(){
 function renderActions(){
   const a = document.getElementById("actions");
   if (view.phase === "answer") {
-    const pb = BY[view.item].post_bank, offer = pb && view.setKey === "bank" && itemAttempts(view.item).length;
-    a.innerHTML = `<button class="btn primary" id="submit">Submit for grading</button>${offer ? `<button class="btn" id="postbank">Post-test: ${esc(pb.label)}</button>` : ""}<span class="note" id="submitnote"></span>`;
+    const offer = view.setKey === "bank" && itemAttempts(view.item).length ? banks(view.item) : [];
+    a.innerHTML = `<button class="btn primary" id="submit">Submit for grading</button>${offer.map(b => `<button class="btn" data-bank="${esc(b.key)}">Post-test: ${esc(b.label)}</button>`).join("")}<span class="note" id="submitnote"></span>`;
     a.querySelector("#submit").addEventListener("click", submit);
-    if (offer) a.querySelector("#postbank").addEventListener("click", () => openItem(view.item, true));
+    a.querySelectorAll("[data-bank]").forEach(b => b.addEventListener("click", () => openItem(view.item, b.dataset.bank)));
     updateSubmit();
   } else if (view.phase === "grading") {
     a.innerHTML = `<span class="note" id="gradenote">Claude is checking your reasoning. This usually takes 10–40 seconds.</span>`;
   } else if (view.phase === "self") {
     a.innerHTML = "";
   } else {
-    const pb = BY[view.item].post_bank, offer = pb && view.setKey !== "post-bank";
-    a.innerHTML = `${offer ? `<button class="btn primary" id="postbank">Post-test: ${esc(pb.label)}</button>` : ""}<button class="btn ${offer ? "" : "primary"}" id="newq">Post-test: new questions</button><button class="btn" id="again">Back to the pre-test</button><span class="note" id="newnote"></span>`;
-    if (offer) a.querySelector("#postbank").addEventListener("click", () => openItem(view.item, true));
+    const offer = banks(view.item).filter(b => b.key !== view.setKey);
+    a.innerHTML = `${offer.map((b, k) => `<button class="btn ${k ? "" : "primary"}" data-bank="${esc(b.key)}">Post-test: ${esc(b.label)}</button>`).join("")}<button class="btn ${offer.length ? "" : "primary"}" id="newq">Post-test: new questions</button><button class="btn" id="again">Back to the pre-test</button><span class="note" id="newnote"></span>`;
+    a.querySelectorAll("[data-bank]").forEach(b => b.addEventListener("click", () => openItem(view.item, b.dataset.bank)));
     a.querySelector("#newq").addEventListener("click", newQuestions);
     a.querySelector("#again").addEventListener("click", () => openItem(view.item));
   }
@@ -390,7 +395,7 @@ async function newQuestions(){
   if (!sample) { note.textContent = "New questions need Claude, which isn't available in this view."; return; }
   const i = BY[view.item];
   btn.disabled = true; note.textContent = "Writing new questions from your wiki page…";
-  const prompt = `Write 3 new exam questions for ${DATA.course.subject} on "${i.title}", in the exam's style: single-best-answer multiple choice with exactly 4 options, or true/false. Use ONLY facts stated in the source text below, and prefer what the course lecture says where the text notes a disagreement; do not ask about figures the text marks as disputed or unclear. Make them different from these existing questions: ${JSON.stringify(i.questions.concat(i.post_bank ? i.post_bank.questions : []).map(q => q.stem))}. Two multiple choice and one true/false.
+  const prompt = `Write 3 new exam questions for ${DATA.course.subject} on "${i.title}", in the exam's style: single-best-answer multiple choice with exactly 4 options, or true/false. Use ONLY facts stated in the source text below, and prefer what the course lecture says where the text notes a disagreement; do not ask about figures the text marks as disputed or unclear. Make them different from these existing questions: ${JSON.stringify(i.questions.concat(...banks(i.id).map(b => b.questions)).map(q => q.stem))}. Two multiple choice and one true/false.
 Each needs the correct answer and a one-sentence reason drawn from the text.
 Reply with only a JSON array like [{"type":"mc","stem":"...","options":["...","...","...","..."],"answer":"B","why":"..."},{"type":"tf","stem":"...","answer":"False","why":"..."}].
 
