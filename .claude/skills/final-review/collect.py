@@ -144,7 +144,7 @@ def main(spec_path, att_dir, out_path=None):
                   f"- You wrote: {ans.get('reasoning') or '(blank)'}",
                   f"- Feedback: {ans.get('feedback') or ''}",
                   f"- Heading candidates: {', '.join(best_headings(it['id'], secs, q, K['heading_candidates'])) or 'none; read the page'}",
-                  f"- Zoe/handout ref: {m.group(1) if (m := re.search(r'\(((?:L\d|handout)[^)]*)\)\s*$', q['stem'])) else ''}", ""]
+                  f"- Question-set ref: {m.group(1) if (m := re.search(r'\(((?:L\d|handout)[^)]*)\)\s*$', q['stem'])) else ''}", ""]
         if len(points) > K["max_points_per_step"]: o += [f"({len(points) - K['max_points_per_step']} more points not shown; raise max_points_per_step)", ""]
         o += ["Sources behind this item:"] + [f"- [[{nm}]]: " + (", ".join(raws) or "no raw file") for nm, raws in source_links(W, ROOT, it["id"])]
         rv = [f"- {x['title']}: [[{vault_path(ROOT, x['file'])}|file]] ({x['page']})" for g in C.get("review", []) for x in g["items"]
