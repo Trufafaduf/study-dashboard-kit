@@ -11,6 +11,15 @@ one page. Its sibling, `obsidian-dashboard-paper`, handles maths and drawn
 reasoning graded from photos. Both share `build_dashboard.py` (keep the two
 copies identical).
 
+**Nothing is written by hand.** Every part of this loop is typed: quiz answers,
+reasons, and any writing practice the schedule sets (essay outlines, short
+answers, timed essays). Put that practice in separate Obsidian pages, one per
+prompt (e.g. `<course>-essay-N-practice`), created once as ordinary wiki pages
+so rebuilds never overwrite what the user has typed. Each page has the prompt
+at the top, space to type from memory, and the page to check against in a
+folded callout. Never tell the user to write on paper or by hand. The exam's
+own format (a blue book, say) is the only place paper appears.
+
 Arguments: the course and exam, e.g. `/obsidian-dashboard-digital bio101 midterm 2`,
 or `sync bio101` to pull new attempts into the wiki.
 
@@ -55,7 +64,15 @@ or `sync bio101` to pull new attempts into the wiki.
    the quiz page can't open local files.
    Word `loop` and `grading` as "answer what you know, leave the rest blank
    rather than guess", never "answer every question".
+   Schedule items for writing practice say "type ... from memory" and link the
+   practice page, never "by hand" or "on paper".
    Every item is `format: "mcq"`.
+   Optionally give an item a `post_bank` {`label`, `source`, `questions`}: a
+   fixed post-test set in the same question shape, such as a GSI's practice
+   questions mapped to the item. The quiz offers it as "Post-test: <label>"
+   (saved with `setKey: "post-bank"`, a different set from the pre-test for the
+   mastery rule), and the build writes `P-posttest-bank` with answers folded.
+   Take the questions and reasons from the source's own key, never from memory.
 4. **Build the quiz**: `python <this skill folder>/build_quiz.py specs/<file>.json`
    writes `specs/out/<prefix>-quiz.html`, embedding the questions, answers,
    reasons and each item's wiki page text (up to 7,000 characters, for post-test
@@ -87,7 +104,7 @@ or `sync bio101` to pull new attempts into the wiki.
    schema: re-score their reasoning 1–5 on the rubric, recompute `marks` as pure
    answer marks and `score`, and write those fields back with `synced: true`.
 2. For each, oldest first, append to the `P-mastery` attempt log:
-   `| date | [[item]] | pre-test or "new questions" | answer marks | NN% | answers a/n; reasoning 4 3 2 (k/n at 3+); graded by claude/self |`.
+   `| date | [[item]] | pre-test, the post-test set's label, or "new questions" | answer marks | NN% | answers a/n; reasoning 4 3 2 (k/n at 3+); graded by claude/self |`.
 3. Update the item page's properties: `pretest_score` or `posttest_score`,
    `last_graded`, and `mastery` from all of that item's attempts by the rules:
    **weak** latest under 80%; **shaky** one pass at 80%+; **mastered** two passes
@@ -107,6 +124,11 @@ or `sync bio101` to pull new attempts into the wiki.
   submit state from `localStorage` alone: the artifact frame can block storage,
   so writes vanish and the button never enables. Keep drafts in memory.
 
+- Grading and post-test generation are async, and the user can open another
+  item while they run. Capture the view at submit and save against it, never
+  the global `view`, or the attempt lands under whichever item is open when
+  grading returns. On sync, an attempt whose answer count doesn't match its
+  item's question count is the sign of this.
 - The page must degrade: `claude.use("db")` or `use("sample")` can resolve
   `null`; the quiz then says it can't save, or falls back to self-scoring.
 - `sample` calls cost the user's own usage; grading is one call per submit, and

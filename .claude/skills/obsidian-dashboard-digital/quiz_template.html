@@ -202,20 +202,28 @@ function renderList(){
   }).join("")).join("");
   el.querySelectorAll(".item").forEach(b => b.addEventListener("click", () => openItem(b.dataset.id)));
 }
-function openItem(id){
+function openItem(id, post){
   current = id; store.set("current", id);
-  view = { item: id, setKey: "bank", kind: "pretest", questions: BY[id].questions, phase: "answer" };
+  view = post && BY[id].post_bank
+    ? { item: id, setKey: "post-bank", kind: "posttest", questions: BY[id].post_bank.questions, phase: "answer" }
+    : { item: id, setKey: "bank", kind: "pretest", questions: BY[id].questions, phase: "answer" };
   renderList(); renderDetail();
   if (matchMedia("(max-width: 820px)").matches) document.getElementById("detail").scrollIntoView({ behavior: "auto", block: "start" });
 }
+// A fixed post-test set ("post_bank" in the spec) counts as a different question set from the pre-test.
+function setName(a){
+  if (a.kind === "pretest") return "Pre-test";
+  if (a.setKey === "post-bank") return (BY[a.item] && BY[a.item].post_bank && BY[a.item].post_bank.label) || "Post-test set";
+  return "New questions";
+}
 
 /* ---------- detail ---------- */
-function draftKey(){ return "draft:" + view.item + ":" + view.setKey; }
+function draftKey(v = view){ return "draft:" + v.item + ":" + v.setKey; }
 // Drafts live in memory and are mirrored to browser storage when it works; storage can be blocked in the frame.
 const drafts = {};
 function getDraft(){ const k = draftKey(); return drafts[k] ??= store.get(k, { c: {}, r: {} }); }
 function saveDraft(d){ store.set(draftKey(), d); }
-function clearDraft(){ delete drafts[draftKey()]; store.del(draftKey()); }
+function clearDraft(v = view){ const k = draftKey(v); delete drafts[k]; store.del(k); }
 function renderDetail(){
   const i = BY[view.item], s = statusOf(i.id), el = document.getElementById("detail");
   const draft = getDraft();
@@ -243,15 +251,15 @@ function renderDetail(){
   }).join("");
   const hist = itemAttempts(i.id).slice().reverse();
   el.innerHTML = `
-    <div class="dhead"><div><div class="eyebrow">${esc(i.lec)} · ${view.kind === "pretest" ? "pre-test" : "post-test, new questions"}</div><h2 style="margin-top:6px">${esc(i.title)}</h2></div>
+    <div class="dhead"><div><div class="eyebrow">${esc(i.lec)} · ${view.kind === "pretest" ? "pre-test" : view.setKey === "post-bank" ? "post-test · " + esc(i.post_bank.label) : "post-test, new questions"}</div><h2 style="margin-top:6px">${esc(i.title)}</h2></div>
       <span class="pill s-${s}"><span class="dot"></span>${s}</span></div>
-    <div class="meta"><span>${view.questions.length} questions</span><span>About ${i.mins} minutes</span><span>Pre-test by ${fmt(i.due)}</span>${view.kind === "pretest" ? "" : "<span>Written by Claude from your wiki page</span>"}</div>
+    <div class="meta"><span>${view.questions.length} questions</span><span>About ${i.mins} minutes</span><span>Pre-test by ${fmt(i.due)}</span>${view.kind === "pretest" ? "" : view.setKey === "post-bank" ? (i.post_bank.source ? `<span>${esc(i.post_bank.source)}</span>` : "") : "<span>Written by Claude from your wiki page</span>"}</div>
     ${res ? `<div class="sec"><span class="eyebrow">Result</span><div class="score">Answers ${res.mcqCorrect}/${res.total} · Reasoning ${res.reasonPassed}/${res.total} at 3+</div>
       <p class="note" style="margin:6px 0 0">Average reasoning ${res.reasonAvg.toFixed(1)}/5. ${res.score >= 0.8 ? "Pass on both parts." : "Not a pass yet: " + [res.mcqCorrect / res.total < 0.8 ? "answers under 80%" : "", res.reasonPassed / res.total < 0.8 ? "under 80% of reasons at 3+" : ""].filter(Boolean).join(" and ") + ". Reread the reference reasons below, then try new questions."} ${res.gradedBy === "self" ? "Reasons were self-checked." : ""} ${res.saved ? "Saved." : db ? "Not saved: " + esc(res.saveError || "") : "Not saved in this view."}</p></div>
       <div class="logic"><span class="eyebrow" style="display:block;margin-bottom:6px">The logic in one line</span>${esc(i.logic)}</div>` : ""}
     <div class="qs">${qs}</div>
     <div class="actions" id="actions"></div>
-    <div class="sec"><span class="eyebrow">Your attempts</span>${hist.length ? `<div class="tblwrap"><table><thead><tr><th>Date</th><th>Set</th><th>Answers</th><th>Reasoning 1–5</th><th>Score</th><th>In wiki</th></tr></thead><tbody>${hist.map(a => `<tr><td class="mono">${esc(a.date)}</td><td>${a.kind === "pretest" ? "Pre-test" : "New questions"}</td><td class="marks">${[...a.marks].map(c => c === "Y" ? '<span class="y">Y</span>' : '<span class="x">N</span>').join("")}</td><td class="marks">${Array.isArray(a.reasonScores) ? a.reasonScores.map(x => `<span class="${x >= REASON_PASS ? "y" : "x"}">${x}</span>`).join("") : "–"}</td><td class="mono">${Math.round(a.score*100)}%</td><td>${a.synced ? "yes" : "not yet"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">No attempts yet.</p>`}</div>`;
+    <div class="sec"><span class="eyebrow">Your attempts</span>${hist.length ? `<div class="tblwrap"><table><thead><tr><th>Date</th><th>Set</th><th>Answers</th><th>Reasoning 1–5</th><th>Score</th><th>In wiki</th></tr></thead><tbody>${hist.map(a => `<tr><td class="mono">${esc(a.date)}</td><td>${esc(setName(a))}</td><td class="marks">${[...a.marks].map(c => c === "Y" ? '<span class="y">Y</span>' : '<span class="x">N</span>').join("")}</td><td class="marks">${Array.isArray(a.reasonScores) ? a.reasonScores.map(x => `<span class="${x >= REASON_PASS ? "y" : "x"}">${x}</span>`).join("") : "–"}</td><td class="mono">${Math.round(a.score*100)}%</td><td>${a.synced ? "yes" : "not yet"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">No attempts yet.</p>`}</div>`;
   if (!res && view.phase === "answer") {
     el.querySelectorAll("input[type=radio]").forEach(r => r.addEventListener("change", () => { const d = getDraft(); d.c[r.name.slice(1)] = r.value; saveDraft(d); updateSubmit(); }));
     el.querySelectorAll("textarea").forEach(t => t.addEventListener("input", () => { const d = getDraft(); d.r[t.dataset.k] = t.value; saveDraft(d); updateSubmit(); }));
@@ -266,15 +274,19 @@ function answered(){
 function renderActions(){
   const a = document.getElementById("actions");
   if (view.phase === "answer") {
-    a.innerHTML = `<button class="btn primary" id="submit">Submit for grading</button><span class="note" id="submitnote"></span>`;
+    const pb = BY[view.item].post_bank, offer = pb && view.setKey === "bank" && itemAttempts(view.item).length;
+    a.innerHTML = `<button class="btn primary" id="submit">Submit for grading</button>${offer ? `<button class="btn" id="postbank">Post-test: ${esc(pb.label)}</button>` : ""}<span class="note" id="submitnote"></span>`;
     a.querySelector("#submit").addEventListener("click", submit);
+    if (offer) a.querySelector("#postbank").addEventListener("click", () => openItem(view.item, true));
     updateSubmit();
   } else if (view.phase === "grading") {
     a.innerHTML = `<span class="note" id="gradenote">Claude is checking your reasoning. This usually takes 10–40 seconds.</span>`;
   } else if (view.phase === "self") {
     a.innerHTML = "";
   } else {
-    a.innerHTML = `<button class="btn primary" id="newq">Post-test: new questions</button><button class="btn" id="again">Back to the pre-test</button><span class="note" id="newnote"></span>`;
+    const pb = BY[view.item].post_bank, offer = pb && view.setKey !== "post-bank";
+    a.innerHTML = `${offer ? `<button class="btn primary" id="postbank">Post-test: ${esc(pb.label)}</button>` : ""}<button class="btn ${offer ? "" : "primary"}" id="newq">Post-test: new questions</button><button class="btn" id="again">Back to the pre-test</button><span class="note" id="newnote"></span>`;
+    if (offer) a.querySelector("#postbank").addEventListener("click", () => openItem(view.item, true));
     a.querySelector("#newq").addEventListener("click", newQuestions);
     a.querySelector("#again").addEventListener("click", () => openItem(view.item));
   }
@@ -286,15 +298,17 @@ function updateSubmit(){
 }
 
 /* ---------- grading ---------- */
+// Grading is async and the user can open another item meanwhile, so everything after this
+// point works on the view captured at submit (v), never the global one.
 async function submit(){
-  const d = getDraft();
-  const answers = view.questions.map((q, k) => ({ choice: d.c[k] || null, reasoning: (d.r[k] || "").trim(), letterOk: d.c[k] === q.answer }));
+  const v = view, d = getDraft();
+  const answers = v.questions.map((q, k) => ({ choice: d.c[k] || null, reasoning: (d.r[k] || "").trim(), letterOk: d.c[k] === q.answer }));
   // A blank reason scores 1 without asking Claude; only written reasons are sent.
   const blank = a => !a.reasoning;
   answers.filter(blank).forEach(a => { a.reasonScore = 1; a.reasonOk = false; a.feedback = "Left blank."; });
-  const todo = view.questions.map((q, k) => [q, answers[k]]).filter(([, a]) => !blank(a));
-  if (!todo.length) return finish(answers, "blank");
-  view.phase = "grading"; renderDetail();
+  const todo = v.questions.map((q, k) => [q, answers[k]]).filter(([, a]) => !blank(a));
+  if (!todo.length) return finish(v, answers, "blank");
+  v.phase = "grading"; renderDetail();
   let graded = null;
   if (sample) {
     const payload = todo.map(([q, a]) => ({ question: q.stem, options: q.type === "tf" ? ["True", "False"] : q.options.map((o, j) => LETTERS[j] + ". " + o),
@@ -321,19 +335,20 @@ ${JSON.stringify(payload)}`;
       if (hide.includes(e.code)) sample = null;
       const msg = e.code === "rate_limited" ? "Claude is busy or you've hit a usage limit. Check the reasons yourself below."
         : "Claude couldn't grade this time. Check the reasons yourself below.";
-      return selfCheck(answers, msg);
+      return selfCheck(v, answers, msg);
     }
   } else {
-    return selfCheck(answers, "Claude isn't available in this view, so check each reason yourself against the reference.");
+    return selfCheck(v, answers, "Claude isn't available in this view, so check each reason yourself against the reference.");
   }
   todo.forEach(([, a], k) => { a.reasonScore = Math.round(Number(graded[k].reason_score)); a.reasonOk = a.reasonScore >= REASON_PASS; a.feedback = String(graded[k].feedback || ""); });
-  finish(answers, "claude");
+  finish(v, answers, "claude");
 }
-function selfCheck(answers, msg){
-  view.phase = "self"; renderDetail();
+function selfCheck(v, answers, msg){
+  if (view !== v) { view = v; current = v.item; renderList(); }   // bring the user back to the item being checked
+  v.phase = "self"; renderDetail();
   const el = document.getElementById("detail");
   el.querySelectorAll(".q").forEach((node, k) => {
-    const q = view.questions[k];
+    const q = v.questions[k];
     if (!answers[k].reasoning) { const box = document.createElement("div"); box.className = "verdict"; box.innerHTML = `<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div><div class="note">Left blank: scored 1.</div>`; node.appendChild(box); return; }
     const box = document.createElement("div"); box.className = "verdict";
     box.innerHTML = `<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div><label class="rl" for="s${k}">How close is your reason? (3 is a pass)</label><select class="sel" id="s${k}" data-k="${k}">${RUBRIC.map(r => `<option value="${r[0]}" ${r[0] === 3 ? "selected" : ""}>${r[0]} · ${r[1]}: ${esc(r[2])}</option>`).join("")}</select>`;
@@ -343,10 +358,10 @@ function selfCheck(answers, msg){
   a.innerHTML = `<button class="btn primary" id="selfdone">Save my self-check</button><span class="note">${esc(msg)}</span>`;
   a.querySelector("#selfdone").addEventListener("click", () => {
     el.querySelectorAll("select[data-k]").forEach(c => { const a = answers[+c.dataset.k]; a.reasonScore = +c.value; a.reasonOk = a.reasonScore >= REASON_PASS; a.feedback = ""; });
-    finish(answers, "self");
+    finish(v, answers, "self");
   });
 }
-async function finish(answers, gradedBy){
+async function finish(v, answers, gradedBy){
   const total = answers.length;
   const marks = answers.map(a => a.letterOk ? "Y" : "N").join("");              // part 1: pure answer marks
   const mcqCorrect = [...marks].filter(c => c === "Y").length;
@@ -355,16 +370,18 @@ async function finish(answers, gradedBy){
   const reasonAvg = reasonScores.reduce((x, y) => x + y, 0) / total;
   const correct = answers.filter(a => a.letterOk && a.reasonScore >= REASON_PASS).length;
   const now = new Date(), date = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0");
-  const rec = { item: view.item, kind: view.kind, setKey: view.setKey, date, ts: now.getTime(), marks, correct, total,
+  const rec = { item: v.item, kind: v.kind, setKey: v.setKey, date, ts: now.getTime(), marks, correct, total,
     mcqCorrect, reasonScores, reasonPassed, reasonAvg, schema: 2,
     score: Math.min(mcqCorrect, reasonPassed) / total, gradedBy, synced: false, answers,
-    ...(view.kind === "posttest" ? { questions: view.questions } : {}) };
+    ...(v.kind === "posttest" ? { questions: v.questions } : {}) };
   const result = { ...rec, saved: false };
   if (db) {
-    try { await db.collection("attempts").doc(view.item + "--" + now.getTime()).set(rec); result.saved = true; clearDraft(); }
+    try { await db.collection("attempts").doc(v.item + "--" + now.getTime()).set(rec); result.saved = true; clearDraft(v); }
     catch (e) { result.saveError = e.code === "quota_exceeded" ? "the store is full." : "the save failed; try submitting again later."; }
   }
-  view.phase = "result"; view.result = result; renderDetail(); renderList(); summary();
+  v.phase = "result"; v.result = result;
+  if (view === v) renderDetail();
+  renderList(); summary();
 }
 
 /* ---------- post-test ---------- */
@@ -373,7 +390,7 @@ async function newQuestions(){
   if (!sample) { note.textContent = "New questions need Claude, which isn't available in this view."; return; }
   const i = BY[view.item];
   btn.disabled = true; note.textContent = "Writing new questions from your wiki page…";
-  const prompt = `Write 3 new exam questions for ${DATA.course.subject} on "${i.title}", in the exam's style: single-best-answer multiple choice with exactly 4 options, or true/false. Use ONLY facts stated in the source text below, and prefer what the course lecture says where the text notes a disagreement; do not ask about figures the text marks as disputed or unclear. Make them different from these existing questions: ${JSON.stringify(i.questions.map(q => q.stem))}. Two multiple choice and one true/false.
+  const prompt = `Write 3 new exam questions for ${DATA.course.subject} on "${i.title}", in the exam's style: single-best-answer multiple choice with exactly 4 options, or true/false. Use ONLY facts stated in the source text below, and prefer what the course lecture says where the text notes a disagreement; do not ask about figures the text marks as disputed or unclear. Make them different from these existing questions: ${JSON.stringify(i.questions.concat(i.post_bank ? i.post_bank.questions : []).map(q => q.stem))}. Two multiple choice and one true/false.
 Each needs the correct answer and a one-sentence reason drawn from the text.
 Reply with only a JSON array like [{"type":"mc","stem":"...","options":["...","...","...","..."],"answer":"B","why":"..."},{"type":"tf","stem":"...","answer":"False","why":"..."}].
 
@@ -386,6 +403,7 @@ ${i.page}`;
        (q.type === "tf" && (q.answer === "True" || q.answer === "False"))))
       .map(q => ({ type: q.type, stem: q.stem, options: q.options, answer: q.answer, why: q.why }));
     if (qs.length < 2) throw { code: "invalid_json" };
+    if (view.item !== i.id) { current = i.id; renderList(); }   // the user moved on while Claude wrote; bring them back
     view = { item: i.id, setKey: "gen-" + Date.now(), kind: "posttest", questions: qs, phase: "answer" };
     renderDetail();
   } catch (e) {

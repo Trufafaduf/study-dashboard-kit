@@ -6,6 +6,8 @@ Writes, inside the spec's wiki folder:
   - properties on every item page (status fields are preserved if already set)
   - pages for items that carry "create_page" and do not exist yet
   - <prefix>-pretest-bank.md     problems, with answers/rubrics in folded callouts
+  - <prefix>-posttest-bank.md    only when an item has "post_bank" (a fixed
+                                  post-test set), in the same format
   - <prefix>-mastery.md          loop, rules, status table, attempt log, schedule
                                   (an existing attempt log is kept)
   - <prefix>-dashboard.md        Dataview countdown, do-next, map, table, schedule
@@ -129,10 +131,24 @@ def quiz_block(C):
             f"**[Open the {C['title']} quiz]({C['quiz_url']})** to answer, give your reasoning and get "
             "graded. Attempts sync back to this wiki when you ask Claude to sync." + nl)
 
+def question_lines(qs, logic):
+    """Multiple-choice and true/false questions, then their answers in a folded callout."""
+    b = []; n = len(qs)
+    for k, q in enumerate(qs, 1):
+        if q["type"] == "tf":
+            b += [f"**{k}. True or false.** {q['stem']}", ""]
+        else:
+            b += [f"**{k}.** {q['stem']}", ""] + [f"- {chr(65+j)}. {o}" for j, o in enumerate(q["options"])] + [""]
+    b += [f"> [!check]- Answers: {n} questions, pass at {-(-n*4//5)}", f"> **Logic.** {logic}", ">",
+          "> | # | Answer | Why |", "> | --- | --- | --- |"]
+    b += [f"> | {k} | {q['answer']} | {q['why']} |" for k, q in enumerate(qs, 1)]
+    return b
+
 def main(spec_path):
     S = json.loads(rd(spec_path))
     C = S["course"]; ITEMS = S["items"]; W, ROOT = wiki_dir(C, spec_path); K = C["exam_key"]; TODAY = C["today"]
     P = C["prefix"]; BANK = C.get("bank_name", f"{P}-pretest-bank"); TRACK = C.get("tracker_name", f"{P}-mastery"); DASH = C.get("dashboard_name", f"{P}-dashboard")
+    PBANK = C.get("post_bank_name", f"{P}-posttest-bank"); HAS_PB = any(i.get("post_bank") for i in ITEMS)
     BY = {i["id"]: i for i in ITEMS}
     for i in ITEMS:
         for n in i.get("needs", []): assert n in BY, f"{i['id']} needs unknown {n}"
@@ -190,19 +206,30 @@ def main(spec_path):
                       f"> **Logic.** {i['logic']}", ">", "> | # | Step | Expected |", "> | --- | --- | --- |"]
                 b += [f"> | {k} | {r[0]} | {r[1]} |" for k, r in enumerate(i["rubric"], 1)]
             else:
-                qs = i["questions"]; n = len(qs)
-                for k, q in enumerate(qs, 1):
-                    if q["type"] == "tf":
-                        b += [f"**{k}. True or false.** {q['stem']}", ""]
-                    else:
-                        b += [f"**{k}.** {q['stem']}", ""] + [f"- {chr(65+j)}. {o}" for j, o in enumerate(q["options"])] + [""]
-                b += [f"> [!check]- Answers: {n} questions, pass at {-(-n*4//5)}", f"> **Logic.** {i['logic']}", ">",
-                      "> | # | Answer | Why |", "> | --- | --- | --- |"]
-                b += [f"> | {k} | {q['answer']} | {q['why']} |" for k, q in enumerate(qs, 1)]
-            if i.get("post"): b += ["", "Post-test from: " + "; ".join(i["post"]) + "."]
+                b += question_lines(i["questions"], i["logic"])
+            post = list(i.get("post", []))
+            if i.get("post_bank"): post.append(f"[[{PBANK}#{i['title']}]] ({i['post_bank']['label']})")
+            if post: b += ["", "Post-test from: " + "; ".join(post) + "."]
             b.append("")
-    b += ["## Related", "", f"- [[{TRACK}]]", f"- [[{DASH}]]"] + [f"- [[{r}]]" for r in C["related"]] + [""]
+    b += ["## Related", "", f"- [[{TRACK}]]", f"- [[{DASH}]]"] + ([f"- [[{PBANK}]]"] if HAS_PB else []) + [f"- [[{r}]]" for r in C["related"]] + [""]
     wr(os.path.join(W, BANK + ".md"), "\n".join(b))
+
+    # ---- post-test bank: fixed post-test sets (a GSI's practice questions, say), when any item has one
+    if HAS_PB:
+        b = ["---", f"title: {C['title']} post-test bank", "type: analysis", f"created: {C.get('post_bank_created', TODAY)}", f"updated: {TODAY}",
+             f"tags: [{', '.join(C['tags'])}]", "---", "", f"# {C['title']} post-test bank", "",
+             C.get("post_bank_intro", "Fixed post-test questions, one set per item, answers folded. Take an item's set "
+                   "after its pre-test, at least a day later.").strip(), ""]
+        for c, name in enumerate(C["cols"]):
+            its = [x for x in ITEMS if x["col"] == c and x.get("post_bank")]
+            if not its: continue
+            b += [f"## {name}", ""]
+            for i in its:
+                pb = i["post_bank"]
+                b += [f"### {i['title']}", "", f"[[{i['id']}]] · {pb['label']}" + (f" · {pb['source']}" if pb.get("source") else ""), ""]
+                b += question_lines(pb["questions"], i["logic"]) + [""]
+        b += ["## Related", "", f"- [[{BANK}]]", f"- [[{TRACK}]]", f"- [[{DASH}]]"] + [f"- [[{r}]]" for r in C["related"]] + [""]
+        wr(os.path.join(W, PBANK + ".md"), "\n".join(b))
 
     # ---- tracker (keep an existing attempt log)
     tp = os.path.join(W, TRACK + ".md"); log_rows = []; ticks = {}
@@ -239,7 +266,7 @@ def main(spec_path):
             key = f"{x} [due:: {d['date']}]"; box, tail = ticks.get(key, (" ", ""))
             t.append(f"- [{box}] {key}{tail}")
         t.append("")
-    t += [C.get("schedule_note", "").strip(), "", "## Related", "", f"- [[{DASH}]]", f"- [[{BANK}]]"] + [f"- [[{r}]]" for r in C["related"]] + [""]
+    t += [C.get("schedule_note", "").strip(), "", "## Related", "", f"- [[{DASH}]]", f"- [[{BANK}]]"] + ([f"- [[{PBANK}]]"] if HAS_PB else []) + [f"- [[{r}]]" for r in C["related"]] + [""]
     wr(tp, "\n".join(t))
 
     # ---- dashboard
