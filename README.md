@@ -11,16 +11,23 @@ tools can be used, versioned and improved on their own.
   pick answers and type your reasoning; grading happens in the page, in two
   parts: each **answer** is marked right or wrong, and Claude scores each
   **reason** 1–5 against a reference reason from your notes (5 exact, 4 close,
-  3 pass, 2 partial, 1 missing). An item passes when at least 80% of answers
-  are right and at least 80% of reasons score 3 or more. "Post-test: new
+  3 pass, 2 partial, 1 missing). An attempt passes when at least 80% of answers
+  are right and at least 80% of reasons score 3 or more, or is **solid** (also
+  a pass) when 90% of answers are right, with a note on the reasons to shore up.
+  Both thresholds are spec settings (`pass`, `solid`). "Post-test: new
   questions" asks Claude to write fresh questions from the item's wiki page.
   Attempts are saved in the artifact's database; say "sync `<course>`" and
   Claude logs them in the wiki and updates each item's mastery.
 - **`obsidian-dashboard-paper`**, for maths and hand-drawn work. One worked
   problem per concept with a folded step-by-step rubric; you work on paper,
   send a photo, and Claude grades it against the rubric.
+- **`final-review`**, for the night before. Turns every graded attempt into one
+  Obsidian page, a step per item with the weakest first: each missed point as the
+  fact to learn, linked to the wiki heading that states it and the source file
+  behind it. Its settings (`config.json`) and layout (`dossier_template.md`) are
+  plain files, so feedback changes them without touching code.
 
-Mastery rules are shared: **weak** if the latest attempt is under 80%,
+Mastery rules are shared: **weak** if the latest attempt did not pass,
 **shaky** after one pass, **mastered** after two passes on different questions
 at least 24 hours apart.
 
@@ -100,6 +107,7 @@ my-brain/                        private repo
   kit-dashboards/                this repo, as a submodule
   .claude/skills/obsidian-dashboard-digital  ->  kit-dashboards/.claude/skills/obsidian-dashboard-digital
   .claude/skills/obsidian-dashboard-paper    ->  kit-dashboards/.claude/skills/obsidian-dashboard-paper
+  .claude/skills/final-review                ->  kit-dashboards/.claude/skills/final-review
   specs/                         your exam specs (private)
   wiki/
 ```

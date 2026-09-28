@@ -1,0 +1,28 @@
+{
+  "_help": "Settings for /final-review. Change a value and rerun; no code edits needed. Keys starting with _ are notes.",
+
+  "reason_below": 3,
+  "_reason_below": "A right answer whose reasoning scored under this (1-5) still counts as a point to review.",
+
+  "include_weak_reasons": true,
+  "include_blanks": true,
+  "include_fixed": true,
+  "_include_fixed": "Show questions missed once and right on a later attempt, marked as fixed, so you can confirm them quickly.",
+
+  "order": ["weak", "shaky", "untested", "mastered"],
+  "_order": "Step order by mastery status. Within a status, items keep the dashboard's lecture order.",
+
+  "skip_mastered_without_misses": true,
+  "max_points_per_step": 12,
+  "heading_candidates": 2,
+  "_heading_candidates": "How many matching headings on the item's wiki page the collector suggests per question.",
+
+  "checkboxes": true,
+  "_checkboxes": "Write review lines as Obsidian checkboxes (- [ ]) so you can tick them off.",
+
+  "page_suffix": "final-review",
+  "_page_suffix": "The dossier is written to <wiki_dir>/<prefix>-<page_suffix>.md.",
+
+  "sections": ["frontmatter", "snapshot", "plan", "steps", "patterns", "numbers", "untested", "sources"],
+  "_sections": "Which parts of dossier_template.md to write, in order. Drop one to leave it out."
+}
