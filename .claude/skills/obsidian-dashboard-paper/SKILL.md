@@ -111,6 +111,11 @@ same way ("write the steps you can"), never "show every step".
 1. Mark each step or question Y or N against the folded rubric or answers. For
    steps, a step passes only if its claim is true and it uses the right tool.
    Say which failed and why, and whether the miss is really a prerequisite.
+   For a set of questions with final answers (multiple choice, short numeric
+   answers), mark the answer and the working separately. If 90% or more of the
+   answers are right (the spec's `solid`), the attempt is **solid** and passes
+   however thin the working; the log note names the questions whose working
+   was missing or wrong. A single worked problem keeps the step rule.
 2. Append a row to the `P-mastery` attempt log:
    `| YYYY-MM-DD | [[item]] | pre-test or the post-test source | YYNY | 75% | note |`.
 3. Update the item page's properties: `pretest_score` or `posttest_score`,
@@ -121,9 +126,10 @@ same way ("write the steps you can"), never "show every step".
    tracker, the item page and `log.md`, by path, with the log heading as the
    message. Never push.
 
-Status rules: **untested** (no attempt), **weak** (latest under 80%),
-**shaky** (one attempt at 80%+), **mastered** (two at 80%+ on different
-questions, 24 hours or more apart).
+Status rules: an attempt passes at 80%+ (the spec's `pass`), or when it is
+solid (above). **untested** (no attempt), **weak** (latest did not pass),
+**shaky** (one pass), **mastered** (two passes on different questions, 24 hours
+or more apart).
 
 ## Pitfalls
 

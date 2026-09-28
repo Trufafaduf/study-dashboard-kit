@@ -109,7 +109,7 @@ th{font:500 11.5px/1.2 var(--sans);letter-spacing:.07em;text-transform:uppercase
     <div>
       <div class="eyebrow" id="eyebrow"></div>
       <h1 id="h1"></h1>
-      <p class="sub">Answer what you can in an item, with a line of reasoning for each. Leave blank anything you don't know rather than guess: a blank counts as wrong, and you can submit at any point. Grading has two parts. <b>Answers</b>: each letter is right or wrong. <b>Reasoning</b>: Claude scores each reason 1–5 for how close it is to the course material, and 3 is a pass. An item passes when at least 80% of answers are right <i>and</i> at least 80% of reasons score 3 or more.</p>
+      <p class="sub">Answer what you can in an item, with a line of reasoning for each. Leave blank anything you don't know rather than guess: a blank counts as wrong, and you can submit at any point. Grading has two parts. <b>Answers</b>: each letter is right or wrong. <b>Reasoning</b>: Claude scores each reason 1–5 for how close it is to the course material, and 3 is a pass. An attempt passes when at least <span id="passpct">80%</span> of answers are right <i>and</i> as many reasons score 3 or more. It is <b>solid</b>, and passes whatever the reasoning, when at least <span id="solidpct">90%</span> of answers are right; the result then notes the reasons to shore up.</p>
     </div>
     <div class="clock" aria-live="polite">
       <div class="eyebrow">Time to the exam</div>
@@ -155,24 +155,32 @@ const RUBRIC = [
   [1, "Missing", "Wrong, absent, too vague to fit only this answer, or argues for a wrong answer."]
 ];
 const REASON_PASS = 3;
-/* An attempt's score is the weaker of its two parts (answers right, reasons at 3+),
-   so both must reach 80%. Older attempts (one combined mark per question) keep their saved score. */
+/* An attempt passes when its score (the weaker of answers right and reasons at 3+) reaches PASS,
+   or when answers alone reach SOLID: then it is "solid", with a note on the reasons that fell short.
+   Both thresholds come from the spec ("pass", "solid"). Older attempts keep their saved score. */
+const PASS = DATA.course.pass ?? 0.8, SOLID = DATA.course.solid ?? 0.9;
+const isSolid = a => typeof a.mcqCorrect === "number" && a.total > 0 && a.mcqCorrect / a.total >= SOLID;
+const passed = a => a.score >= PASS || isSolid(a);
+const pct = x => Math.round(x * 100) + "%";
 
 /* ---------- status from attempts ---------- */
 function itemAttempts(id){ return attempts.filter(a => a.item === id).sort((a, b) => a.ts - b.ts); }
 function statusOf(id){
   const a = itemAttempts(id);
   if (!a.length) return "untested";
-  if (a[a.length - 1].score < 0.8) return "weak";
-  const passes = a.filter(x => x.score >= 0.8);
+  if (!passed(a[a.length - 1])) return "weak";
+  const passes = a.filter(passed);
   if (passes.length >= 2 && new Set(passes.map(x => x.setKey)).size >= 2 && passes[passes.length - 1].ts - passes[0].ts >= 864e5) return "mastered";
   return "shaky";
 }
-function lastScore(id){ const a = itemAttempts(id); return a.length ? Math.round(a[a.length - 1].score * 100) + "%" : ""; }
+function lastScore(id){ const a = itemAttempts(id), l = a[a.length - 1]; return l ? (isSolid(l) && l.score < PASS ? "solid" : pct(l.score)) : ""; }
+// The questions whose reasons scored under 3, as "Q2, Q5".
+function shortReasons(a){ return (a.reasonScores || []).map((x, k) => x < REASON_PASS ? "Q" + (k + 1) : "").filter(Boolean).join(", "); }
 
 /* ---------- header ---------- */
 document.getElementById("eyebrow").textContent = DATA.course.eyebrow;
 document.getElementById("h1").textContent = DATA.course.heading;
+document.getElementById("passpct").textContent = pct(PASS); document.getElementById("solidpct").textContent = pct(SOLID);
 document.getElementById("where").textContent = DATA.course.exam.label;
 function tick(){
   const ms = new Date(DATA.course.exam.when) - new Date(), el = document.getElementById("countdown");
@@ -260,11 +268,11 @@ function renderDetail(){
       <span class="pill s-${s}"><span class="dot"></span>${s}</span></div>
     <div class="meta"><span>${view.questions.length} questions</span><span>About ${i.mins} minutes</span><span>Pre-test by ${fmt(i.due)}</span>${view.kind === "pretest" ? "" : vb ? (vb.source ? `<span>${esc(vb.source)}</span>` : "") : "<span>Written by Claude from your wiki page</span>"}</div>
     ${res ? `<div class="sec"><span class="eyebrow">Result</span><div class="score">Answers ${res.mcqCorrect}/${res.total} · Reasoning ${res.reasonPassed}/${res.total} at 3+</div>
-      <p class="note" style="margin:6px 0 0">Average reasoning ${res.reasonAvg.toFixed(1)}/5. ${res.score >= 0.8 ? "Pass on both parts." : "Not a pass yet: " + [res.mcqCorrect / res.total < 0.8 ? "answers under 80%" : "", res.reasonPassed / res.total < 0.8 ? "under 80% of reasons at 3+" : ""].filter(Boolean).join(" and ") + ". Reread the reference reasons below, then try new questions."} ${res.gradedBy === "self" ? "Reasons were self-checked." : ""} ${res.saved ? "Saved." : db ? "Not saved: " + esc(res.saveError || "") : "Not saved in this view."}</p></div>
+      <p class="note" style="margin:6px 0 0">Average reasoning ${res.reasonAvg.toFixed(1)}/5. ${res.score >= PASS && !shortReasons(res) ? "Pass on both parts." : isSolid(res) ? "Solid: " + pct(res.mcqCorrect / res.total) + " of answers right, so this counts as a pass." + (shortReasons(res) ? " Reasoning to shore up: " + shortReasons(res) + ". Reread those reference reasons below." : "") : res.score >= PASS ? "Pass on both parts. Reasoning to shore up: " + shortReasons(res) + "." : "Not a pass yet: " + [res.mcqCorrect / res.total < PASS ? "answers under " + pct(PASS) : "", res.reasonPassed / res.total < PASS ? "under " + pct(PASS) + " of reasons at 3+" : ""].filter(Boolean).join(" and ") + ". Reread the reference reasons below, then try new questions."} ${res.gradedBy === "self" ? "Reasons were self-checked." : ""} ${res.saved ? "Saved." : db ? "Not saved: " + esc(res.saveError || "") : "Not saved in this view."}</p></div>
       <div class="logic"><span class="eyebrow" style="display:block;margin-bottom:6px">The logic in one line</span>${esc(i.logic)}</div>` : ""}
     <div class="qs">${qs}</div>
     <div class="actions" id="actions"></div>
-    <div class="sec"><span class="eyebrow">Your attempts</span>${hist.length ? `<div class="tblwrap"><table><thead><tr><th>Date</th><th>Set</th><th>Answers</th><th>Reasoning 1–5</th><th>Score</th><th>In wiki</th></tr></thead><tbody>${hist.map(a => `<tr><td class="mono">${esc(a.date)}</td><td>${esc(setName(a))}</td><td class="marks">${[...a.marks].map(c => c === "Y" ? '<span class="y">Y</span>' : '<span class="x">N</span>').join("")}</td><td class="marks">${Array.isArray(a.reasonScores) ? a.reasonScores.map(x => `<span class="${x >= REASON_PASS ? "y" : "x"}">${x}</span>`).join("") : "–"}</td><td class="mono">${Math.round(a.score*100)}%</td><td>${a.synced ? "yes" : "not yet"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">No attempts yet.</p>`}</div>`;
+    <div class="sec"><span class="eyebrow">Your attempts</span>${hist.length ? `<div class="tblwrap"><table><thead><tr><th>Date</th><th>Set</th><th>Answers</th><th>Reasoning 1–5</th><th>Score</th><th>In wiki</th></tr></thead><tbody>${hist.map(a => `<tr><td class="mono">${esc(a.date)}</td><td>${esc(setName(a))}</td><td class="marks">${[...a.marks].map(c => c === "Y" ? '<span class="y">Y</span>' : '<span class="x">N</span>').join("")}</td><td class="marks">${Array.isArray(a.reasonScores) ? a.reasonScores.map(x => `<span class="${x >= REASON_PASS ? "y" : "x"}">${x}</span>`).join("") : "–"}</td><td class="mono">${pct(a.score)}${isSolid(a) && a.score < PASS ? " · solid" : ""}</td><td>${a.synced ? "yes" : "not yet"}</td></tr>`).join("")}</tbody></table></div>` : `<p class="note">No attempts yet.</p>`}</div>`;
   if (!res && view.phase === "answer") {
     el.querySelectorAll("input[type=radio]").forEach(r => r.addEventListener("change", () => { const d = getDraft(); d.c[r.name.slice(1)] = r.value; saveDraft(d); updateSubmit(); }));
     el.querySelectorAll("textarea").forEach(t => t.addEventListener("input", () => { const d = getDraft(); d.r[t.dataset.k] = t.value; saveDraft(d); updateSubmit(); }));
@@ -378,6 +386,7 @@ async function finish(v, answers, gradedBy){
   const rec = { item: v.item, kind: v.kind, setKey: v.setKey, date, ts: now.getTime(), marks, correct, total,
     mcqCorrect, reasonScores, reasonPassed, reasonAvg, schema: 2,
     score: Math.min(mcqCorrect, reasonPassed) / total, gradedBy, synced: false, answers,
+    solid: mcqCorrect / total >= SOLID, passed: Math.min(mcqCorrect, reasonPassed) / total >= PASS || mcqCorrect / total >= SOLID,
     ...(v.kind === "posttest" ? { questions: v.questions } : {}) };
   const result = { ...rec, saved: false };
   if (db) {

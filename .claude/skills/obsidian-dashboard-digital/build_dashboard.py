@@ -154,6 +154,7 @@ def question_lines(qs, logic):
 def main(spec_path):
     S = json.loads(rd(spec_path))
     C = S["course"]; ITEMS = S["items"]; W, ROOT = wiki_dir(C, spec_path); K = C["exam_key"]; TODAY = C["today"]
+    PASS = f"{round(C.get('pass', 0.8) * 100)}%"; SOLID = f"{round(C.get('solid', 0.9) * 100)}%"
     P = C["prefix"]; BANK = C.get("bank_name", f"{P}-pretest-bank"); TRACK = C.get("tracker_name", f"{P}-mastery"); DASH = C.get("dashboard_name", f"{P}-dashboard")
     PBANK = C.get("post_bank_name", f"{P}-posttest-bank"); HAS_PB = any(post_banks(i) for i in ITEMS)
     BY = {i["id"]: i for i in ITEMS}
@@ -257,10 +258,12 @@ def main(spec_path):
          f"problem on [[{BANK}]]). Every item page has `{K}: true`, which is how [[{DASH}]] finds them.", "",
          "## The loop", "", C["loop"].strip(), "",
          "## Status rules", "",
+         f"An attempt **passes** at {PASS} or more. It is **solid**, and passes whatever the reasoning or working,",
+         f"when {SOLID} or more of its answers are right; the log then notes what reasoning to shore up.", "",
          "- **untested**: no graded attempt yet.",
-         "- **weak**: the latest attempt scored under 80%.",
-         "- **shaky**: one attempt at 80% or more.",
-         "- **mastered**: two attempts at 80% or more on different questions, at least 24 hours apart.", "",
+         "- **weak**: the latest attempt did not pass.",
+         "- **shaky**: one passing attempt.",
+         "- **mastered**: two passing attempts on different questions, at least 24 hours apart.", "",
          "## Status", "", "```dataview",
          "TABLE WITHOUT ID file.link AS Item, lecture AS Lecture, mastery AS Status, pretest_due AS \"Pre-test by\", pretest_score AS Pre, posttest_score AS Post, last_graded AS Graded",
          f"FROM #{C['tag']} WHERE {K} SORT order ASC", "```", "",

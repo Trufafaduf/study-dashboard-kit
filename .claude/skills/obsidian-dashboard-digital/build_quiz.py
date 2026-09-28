@@ -35,7 +35,8 @@ def main(spec_path):
                           logic=i["logic"], questions=i["questions"], post_banks=post_banks(i),
                           page=page_text(os.path.join(W, i["id"] + ".md"))))
     data = dict(course=dict(prefix=C["prefix"], title=C["title"], eyebrow=C["quiz"]["eyebrow"], heading=C["quiz"]["heading"],
-                            subject=C["quiz"]["subject"], exam=C["exam"], cols=C["cols"]), items=items)
+                            subject=C["quiz"]["subject"], exam=C["exam"], cols=C["cols"],
+                            **{"pass": C.get("pass", 0.8), "solid": C.get("solid", 0.9)}), items=items)
     html = rd(os.path.join(HERE, "quiz_template.html"))
     html = html.replace("@@PAGE_TITLE@@", C["quiz"]["page_title"])
     html = html.replace("/*__DATA__*/null", json.dumps(data, ensure_ascii=False).replace("</", "<\\/"))

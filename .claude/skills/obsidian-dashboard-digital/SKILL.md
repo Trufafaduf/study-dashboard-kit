@@ -40,7 +40,7 @@ or `sync bio101` to pull new attempts into the wiki.
 
 | Where | What it does |
 | --- | --- |
-| **Quiz artifact** (claude.ai, `db` + `sample`) | Items grouped by lecture with live status; per question an answer choice and a reasoning box (drafts kept in memory and mirrored to browser storage when the frame allows it). Submit is always enabled: blanks are allowed so the user skips rather than guesses. A blank answer is marked N, and a blank reason scores 1 without being sent to Claude. On submit, grading runs in two parts: the letter is marked Y/N, and `sample` has Claude score each reason 1–5 against the reference reason (5 Exact, 4 Close, 3 Pass, 2 Partial, 1 Missing) with a sentence of feedback. An attempt's `score` is min(answers right, reasons at 3+) / total, so both parts must reach 80%. If Claude is unavailable the page falls back to a 1–5 self-score. "Post-test: new questions" has Claude write three fresh questions from the item's own wiki page text. Every attempt is saved to the `attempts` collection. |
+| **Quiz artifact** (claude.ai, `db` + `sample`) | Items grouped by lecture with live status; per question an answer choice and a reasoning box (drafts kept in memory and mirrored to browser storage when the frame allows it). Submit is always enabled: blanks are allowed so the user skips rather than guesses. A blank answer is marked N, and a blank reason scores 1 without being sent to Claude. On submit, grading runs in two parts: the letter is marked Y/N, and `sample` has Claude score each reason 1–5 against the reference reason (5 Exact, 4 Close, 3 Pass, 2 Partial, 1 Missing) with a sentence of feedback. An attempt's `score` is min(answers right, reasons at 3+) / total, and it passes at 80% (the spec's `pass`). It is also a pass, marked **solid**, when 90% or more of its answers are right (the spec's `solid`), however the reasons scored; the result lists the reasons under 3 to shore up. Saved attempts carry `solid` and `passed`. If Claude is unavailable the page falls back to a 1–5 self-score. "Post-test: new questions" has Claude write three fresh questions from the item's own wiki page text. Every attempt is saved to the `attempts` collection. |
 | **Obsidian** (built by `build_dashboard.py`) | Item properties, `P-pretest-bank` (the same questions with folded answers, an offline backup), `P-mastery` (loop, rules, attempt log, review checklist, schedule), `P-dashboard` (countdown, do-next, map, status, to-review progress and checklist, schedule, and a link to the quiz). |
 
 ## Building a new one
@@ -108,11 +108,16 @@ or `sync bio101` to pull new attempts into the wiki.
    answer marks and `score`, and write those fields back with `synced: true`.
 2. For each, oldest first, append to the `P-mastery` attempt log:
    `| date | [[item]] | pre-test, the post-test set's label, or "new questions" | answer marks | NN% | answers a/n; reasoning 4 3 2 (k/n at 3+); graded by claude/self |`.
+   For a solid attempt whose score is under the pass mark, write `solid` after the
+   score (`70%, solid`) and end the note with `reasoning to shore up: Q2, Q7`.
 3. Update the item page's properties: `pretest_score` or `posttest_score`,
-   `last_graded`, and `mastery` from all of that item's attempts by the rules:
-   **weak** latest under 80%; **shaky** one pass at 80%+; **mastered** two passes
-   on different question sets (`setKey`) at least 24 hours apart. The quiz uses
-   the same rules, so the two agree.
+   `last_graded`, and `mastery` from all of that item's attempts by the rules.
+   An attempt passes when `score` reaches `pass` (default 80%) or when its answers
+   alone reach `solid` (default 90%, compute it from `mcqCorrect / total` for
+   older attempts). **weak** latest did not pass; **shaky** one pass; **mastered**
+   two passes on different question sets (`setKey`) at least 24 hours apart. The
+   quiz uses the same rules, so the two agree. When `solid` or `pass` changes,
+   recompute every item from all its attempts, not only the new ones.
 4. Mark each synced document with `update` `{synced: true}` (pin `if_version`),
    in one `batch`.
 5. Log the sync in `wiki/log.md` and report scores, anything weak, and any
