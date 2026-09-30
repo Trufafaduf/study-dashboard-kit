@@ -186,7 +186,7 @@ def main(spec_path):
         def wrap(lines):
             if not LOCK: return lines
             answers.setdefault(item, {})[key] = base64.b64encode(unfold(lines).encode("utf-8")).decode("ascii")
-            return ["```dataviewjs", f'await dv.view("{VW}/{ANS}", {{item: "{item}", set: "{key}", prop: "{prop}", data: "{VW}/{ANS}.json"}});', "```"]
+            return ["```dataviewjs", f'await dv.view("{VW}/{ANS}", {{item: "{item}", set: "{key}", prop: "{prop}", data: "{VW}/{ANS}.json", track: "{VW}/{TRACK}.md", pass: {C.get("pass", 0.8)}}});', "```"]
         return wrap
     BY = {i["id"]: i for i in ITEMS}
     for i in ITEMS:

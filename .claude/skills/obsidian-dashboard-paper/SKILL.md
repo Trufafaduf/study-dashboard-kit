@@ -155,6 +155,17 @@ same way ("write the steps you can"), never "show every step".
    tracker, the item page and `log.md`, by path, with the log heading as the
    message. Never push.
 
+### Timecrunch grade (self-grading)
+
+For when there's no time to wait for Claude. Each locked rubric on the bank has
+a **Timecrunch grade** button (the dashboard's Submit work rows link to it).
+It reveals the rubric at once, the user taps each step Y or N, and **Save
+grade** writes the score property, `last_graded`, `mastery` by the rules below,
+clears any pending submission, and appends an attempt-log row noted
+`timecrunch self-grade`. Treat those rows as real attempts. Claude doesn't
+re-grade them, but rebuilds and republishes the board when asked, so their
+rubrics appear there too.
+
 Status rules: an attempt passes at 80%+ (the spec's `pass`), or when it is
 solid (above). **untested** (no attempt), **weak** (latest did not pass),
 **shaky** (one pass), **mastered** (two passes on different questions, 24 hours
