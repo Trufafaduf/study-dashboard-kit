@@ -22,7 +22,9 @@ tools can be used, versioned and improved on their own.
   problem per concept with a step-by-step rubric; you work on paper, submit
   photos from the dashboard's button for that item (or send them in chat), and
   say "grade `<course>` submissions". Claude grades against the rubric, and
-  only then does the rubric unlock on the bank page.
+  only then does the rubric unlock on the bank page. An optional claude.ai
+  mastery board (`build_board.py`) leaves each rubric out of the page entirely
+  until that item is graded.
 - **`final-review`**, for the night before. Turns every graded attempt into one
   Obsidian page, a step per item with the weakest first: each missed point as the
   fact to learn, linked to the wiki heading that states it and the source file
@@ -80,6 +82,7 @@ from this repo's root to try the skills without a real course:
 python .claude/skills/obsidian-dashboard-digital/build_quiz.py examples/specs/geo110-midterm-1.json
 python .claude/skills/obsidian-dashboard-digital/build_dashboard.py examples/specs/geo110-midterm-1.json
 python .claude/skills/obsidian-dashboard-paper/build_dashboard.py examples/specs/phys105-midterm-1.json
+python .claude/skills/obsidian-dashboard-paper/build_board.py examples/specs/phys105-midterm-1.json
 ```
 
 The builders find the brain root from the `BRAIN_ROOT` environment variable,

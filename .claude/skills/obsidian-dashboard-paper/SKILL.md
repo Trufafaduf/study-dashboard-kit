@@ -1,6 +1,6 @@
 ---
 name: obsidian-dashboard-paper
-description: Build or update a paper-graded exam study dashboard in the wiki, inside Obsidian, for work where the user does maths or draws their reasoning by hand - one worked problem per concept with a step rubric that stays locked until the attempt is graded, status stored as page properties, a Dataview dashboard note with a photo submit button per item, and grading from photos of their work. Use when the user says /obsidian-dashboard-paper, asks for a study dashboard for a maths-heavy exam, sends a photo of a pre-test to grade, or says "grade <course> submissions". For multiple-choice or written-answer exams use obsidian-dashboard-digital instead.
+description: Build or update a paper-graded exam study dashboard in the wiki, inside Obsidian, for work where the user does maths or draws their reasoning by hand - one worked problem per concept with a step rubric that stays locked until the attempt is graded, status stored as page properties, a Dataview dashboard note with a photo submit button per item, an optional claude.ai mastery board whose rubrics are left out of the page until each item is graded, and grading from photos of their work. Use when the user says /obsidian-dashboard-paper, asks for a study dashboard for a maths-heavy exam, sends a photo of a pre-test to grade, or says "grade <course> submissions". For multiple-choice or written-answer exams use obsidian-dashboard-digital instead.
 ---
 
 # /obsidian-dashboard-paper
@@ -36,6 +36,7 @@ For a spec with `prefix` P, inside the course folder:
 | `P-pretest-bank` | every item's problem or questions. Each rubric is **locked**: a small DataviewJS view shows it only once the item page has a `pretest_score` (a post-test bank's answers wait for `posttest_score`) |
 | `P-answers.json`, `P-answers.js` | the locked rubrics and answers (base64, so a stray glance at the file gives nothing away) and the view the banks call. Obsidian's file list hides both by default |
 | `P-mastery` | the loop, status rules, a Dataview status table, the attempt log, a **Review** checklist (one task per reading, slide deck, handout, problem set or past exam, linked to the file and its wiki page), the dated schedule as `[due::]` tasks |
+| `out/P-board.html` (optional) | the claude.ai **mastery board**, built by `build_board.py` when the spec has a `board` block: countdown, do-next, dependency map, one panel per item (problem, logic, needs and unlocks, attempts, a copyable grading request), plan and grading tabs. **An item's rubric is written into the page only once its page has a `pretest_score`**; until then the page holds the step count and a locked notice, so the rubric is in neither the page nor its source. `out/` is gitignored |
 | `P-dashboard` | DataviewJS countdown and status bar, do-next list (reviews that are due included), **Submit work** (one row per item: pre-test or post-test, and a button that saves photos or a PDF into `P-submissions/` and flags the item page), mermaid map coloured by status, status table, **To review** (progress bar and the checklist, tickable in place), schedule, embedded attempt log |
 
 Status lives only in item properties, the attempt log and the tracker's
@@ -102,6 +103,12 @@ Nothing is kept in browser storage or an artifact.
    entry. Run a broken-link check on the three new pages.
 7. **Open it** with the `obsidian://` link the build prints (needs
    `brain.config.json`). Dataview must be installed with JavaScript queries on.
+   **Board** (when the spec has `board`: {`url`, and optional `title`,
+   `eyebrow`, `heading`, `sub`, `post_note`, `grade_label`}): run
+   `python <this skill folder>/build_board.py specs/<file>.json` and publish
+   `specs/out/<prefix>-board.html` to `board.url` with the Artifact tool (read
+   it first when this conversation hasn't published it). No capabilities. For a
+   new board, publish without `url`, then write the URL into the spec.
 8. **Commit** (if Auto-commit is on, per Version control in `CLAUDE.md`): the
    spec, the generated pages, edited item and hub pages, index and log, by path,
    with the log heading as the message. Rebuilds commit the same way. Never push.
@@ -141,7 +148,10 @@ same way ("write the steps you can"), never "show every step".
    Leave the photos where they are; they're local and gitignored.
 4. For a post-test, use a different problem from the item's `post` list (problem
    sets, sections, unheld past exams), never a held-back mock.
-5. Log the grading in `wiki/log.md`, then **commit** (if Auto-commit is on): the
+5. If the spec has a `board`, rebuild it with `build_board.py` and republish
+   it to `board.url`. That is what puts the graded item's rubric on the board;
+   never paste a rubric into the board or chat before its grade is in.
+6. Log the grading in `wiki/log.md`, then **commit** (if Auto-commit is on): the
    tracker, the item page and `log.md`, by path, with the log heading as the
    message. Never push.
 
@@ -160,6 +170,9 @@ or more apart).
 - A learning-management system's Files export often holds only the Files area.
   Lecture slides posted in modules or pages can be missing from it; check before
   assuming the scope is covered.
+- The board is a snapshot. Rebuild and republish it after every grading, or
+  its statuses go stale and graded rubrics stay locked. `build_board.py` and
+  `board_template.html` belong to this skill only.
 - `build_dashboard.py`, `dashboard_template.md`, `submit_block.md` and
   `answers_view.js` are shared with `obsidian-dashboard-digital`; keep the two
   copies identical. The script tells the skills apart by its folder name.

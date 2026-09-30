@@ -182,6 +182,7 @@ def main():
         "examples/wiki/courses/phys105/phys105-mt1-pretest-bank.md",
         "examples/wiki/courses/phys105/phys105-mt1-answers.json",
         "examples/wiki/courses/phys105/phys105-mt1-answers.js",
+        "examples/specs/out/phys105-mt1-board.html",
     ]
     for rel in expect:
         p = os.path.join(clone, rel)
@@ -203,8 +204,11 @@ def main():
         fail("phys105 dashboard is missing its Submit work section")
     if "[!check]" not in gb or "## Submit work" in text("examples/wiki/courses/geo110/geo110-mt1-dashboard.md"):
         fail("geo110 (digital) should keep folded answers and have no submitter")
+    board = text("examples/specs/out/phys105-mt1-board.html")
+    if '"rubric": null' not in board or '"rubric": [' in board:
+        fail("phys105 board should carry no rubric before any item is graded")
     if not FAILURES:
-        ok("paper build locks rubrics and adds the submitter; digital build does not")
+        ok("paper build locks rubrics and adds the submitter; digital build does not; the board holds no ungraded rubric")
 
     # 5. idempotence: run the same commands again, tree must be unchanged
     before = tree_hashes(clone)
