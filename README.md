@@ -19,8 +19,10 @@ tools can be used, versioned and improved on their own.
   Attempts are saved in the artifact's database; say "sync `<course>`" and
   Claude logs them in the wiki and updates each item's mastery.
 - **`obsidian-dashboard-paper`**, for maths and hand-drawn work. One worked
-  problem per concept with a folded step-by-step rubric; you work on paper,
-  send a photo, and Claude grades it against the rubric.
+  problem per concept with a step-by-step rubric; you work on paper, submit
+  photos from the dashboard's button for that item (or send them in chat), and
+  say "grade `<course>` submissions". Claude grades against the rubric, and
+  only then does the rubric unlock on the bank page.
 - **`final-review`**, for the night before. Turns every graded attempt into one
   Obsidian page, a step per item with the weakest first: each missed point as the
   fact to learn, linked to the wiki heading that states it and the source file

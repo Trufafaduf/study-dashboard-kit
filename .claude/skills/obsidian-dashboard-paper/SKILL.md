@@ -1,6 +1,6 @@
 ---
 name: obsidian-dashboard-paper
-description: Build or update a paper-graded exam study dashboard in the wiki, inside Obsidian, for work where the user does maths or draws their reasoning by hand - one worked problem per concept with a folded step rubric, status stored as page properties, a Dataview dashboard note, and grading from photos of their work. Use when the user says /obsidian-dashboard-paper, asks for a study dashboard for a maths-heavy exam, or sends a photo of a pre-test to grade. For multiple-choice or written-answer exams use obsidian-dashboard-digital instead.
+description: Build or update a paper-graded exam study dashboard in the wiki, inside Obsidian, for work where the user does maths or draws their reasoning by hand - one worked problem per concept with a step rubric that stays locked until the attempt is graded, status stored as page properties, a Dataview dashboard note with a photo submit button per item, and grading from photos of their work. Use when the user says /obsidian-dashboard-paper, asks for a study dashboard for a maths-heavy exam, sends a photo of a pre-test to grade, or says "grade <course> submissions". For multiple-choice or written-answer exams use obsidian-dashboard-digital instead.
 ---
 
 # /obsidian-dashboard-paper
@@ -33,12 +33,18 @@ For a spec with `prefix` P, inside the course folder:
 | Page | Holds |
 | --- | --- |
 | item pages (existing concept/source pages) | properties: `<exam_key>: true`, `order`, `lecture`, `mastery`, `pretest_due`, `pretest_score`, `posttest_score`, `last_graded`, `pretest` (link to its questions), `needs` (prerequisite links) |
-| `P-pretest-bank` | every item's problem or questions; rubrics and answers in folded `[!check]-` callouts |
+| `P-pretest-bank` | every item's problem or questions. Each rubric is **locked**: a small DataviewJS view shows it only once the item page has a `pretest_score` (a post-test bank's answers wait for `posttest_score`) |
+| `P-answers.json`, `P-answers.js` | the locked rubrics and answers (base64, so a stray glance at the file gives nothing away) and the view the banks call. Obsidian's file list hides both by default |
 | `P-mastery` | the loop, status rules, a Dataview status table, the attempt log, a **Review** checklist (one task per reading, slide deck, handout, problem set or past exam, linked to the file and its wiki page), the dated schedule as `[due::]` tasks |
-| `P-dashboard` | DataviewJS countdown and status bar, do-next list (reviews that are due included), mermaid map coloured by status, status table, **To review** (progress bar and the checklist, tickable in place), schedule, embedded attempt log |
+| `P-dashboard` | DataviewJS countdown and status bar, do-next list (reviews that are due included), **Submit work** (one row per item: pre-test or post-test, and a button that saves photos or a PDF into `P-submissions/` and flags the item page), mermaid map coloured by status, status table, **To review** (progress bar and the checklist, tickable in place), schedule, embedded attempt log |
 
 Status lives only in item properties, the attempt log and the tracker's
-checkboxes. A rebuild keeps ticked boxes, both review and schedule tasks.
+checkboxes. A submission adds three properties to the item page until it is
+graded: `submitted` (date), `submission_kind` (pre-test or post-test) and
+`submission_files` (vault paths). The photos stay in `P-submissions/`, which
+the brain should gitignore (`wiki/**/*-submissions/`).
+The lock and the submitter are on for every build run from this skill; a spec
+can turn either off with `"lock_answers": false` or `"submitter": false`. A rebuild keeps ticked boxes, both review and schedule tasks.
 Nothing is kept in browser storage or an artifact.
 
 ## Steps
@@ -68,7 +74,9 @@ Nothing is kept in browser storage or an artifact.
    here; multiple-choice specs belong to the digital skill. Course fields:
    `title`, `prefix`, `tag`, `exam_key`, `wiki_dir`, `created`, `today`, `tags`,
    `exam` {`when` ISO with offset, `label`, `name`}, `cols`, `related`,
-   `bank_intro`, `tracker_intro`, `loop`, `grading`, `plan`
+   `bank_intro`, `tracker_intro`, `loop`, `grading` (say how to submit: the
+   dashboard's Submit work button, then "grade <tag> submissions"; and that the
+   rubric unlocks after grading), `plan`
    [{`date`,`dow`,`mon`,`head`,`items`}], `schedule_note`, `review` (below),
    and optional `review_intro` and `bank_name` / `tracker_name` /
    `dashboard_name` overrides. Item fields: `id`,
@@ -100,7 +108,15 @@ Nothing is kept in browser storage or an artifact.
 
 ## Grading an attempt
 
-When the user sends a photo or a result for an item:
+Two ways in. Either the user sends a photo in chat and names the item, or they
+submit from the dashboard and say **"grade <tag> submissions"** (or "grade
+submissions"). For the second, find every item page in the course folder with a
+`submitted` property, and read each file in its `submission_files` (images with
+Read; a PDF with its pages). Grade each item as below, pre-test or post-test by
+its `submission_kind`, oldest first.
+
+Grade against the rubric or answers **in the spec**, not the bank page: the bank
+keeps them locked until the grade is in, and the spec is the source.
 
 Partial work is a valid attempt. Grade whatever was sent: a step or question
 left blank is marked N, like a wrong one. Never ask for the rest first, and tell
@@ -108,7 +124,7 @@ the user to stop where they're stuck rather than guess, so the marks show what
 they actually know. Write the study instructions in `loop` and `grading` the
 same way ("write the steps you can"), never "show every step".
 
-1. Mark each step or question Y or N against the folded rubric or answers. For
+1. Mark each step or question Y or N against the rubric or answers. For
    steps, a step passes only if its claim is true and it uses the right tool.
    Say which failed and why, and whether the miss is really a prerequisite.
    For a set of questions with final answers (multiple choice, short numeric
@@ -119,7 +135,10 @@ same way ("write the steps you can"), never "show every step".
 2. Append a row to the `P-mastery` attempt log:
    `| YYYY-MM-DD | [[item]] | pre-test or the post-test source | YYNY | 75% | note |`.
 3. Update the item page's properties: `pretest_score` or `posttest_score`,
-   `last_graded`, and `mastery` by the rules below. The dashboard updates itself.
+   `last_graded`, and `mastery` by the rules below, and delete `submitted`,
+   `submission_kind` and `submission_files` if present. Setting the score is
+   what unlocks the item's rubric on the bank. The dashboard updates itself.
+   Leave the photos where they are; they're local and gitignored.
 4. For a post-test, use a different problem from the item's `post` list (problem
    sets, sections, unheld past exams), never a held-back mock.
 5. Log the grading in `wiki/log.md`, then **commit** (if Auto-commit is on): the
@@ -141,5 +160,12 @@ or more apart).
 - A learning-management system's Files export often holds only the Files area.
   Lecture slides posted in modules or pages can be missing from it; check before
   assuming the scope is covered.
-- `build_dashboard.py` is shared with `obsidian-dashboard-digital`; keep the two
-  copies identical.
+- `build_dashboard.py`, `dashboard_template.md`, `submit_block.md` and
+  `answers_view.js` are shared with `obsidian-dashboard-digital`; keep the two
+  copies identical. The script tells the skills apart by its folder name.
+- The lock stops accidental peeking, not a determined reader: the answers file
+  is in the vault. Never paste a locked rubric into chat before the grade is in.
+- Obsidian rewrites an item page's frontmatter in its own style when the
+  submitter sets properties (quotes, list layout). The build reads either style.
+- The submitter's file picker needs Obsidian desktop or mobile with Dataview
+  JavaScript queries on. On mobile, the picker offers the camera.

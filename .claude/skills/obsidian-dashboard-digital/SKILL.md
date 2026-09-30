@@ -8,8 +8,10 @@ description: Build or update a digital exam study loop for a course in the wiki 
 For exams answered by choosing and explaining: multiple choice, true/false,
 short written reasons. Everything is typed, so answering and grading happen in
 one page. Its sibling, `obsidian-dashboard-paper`, handles maths and drawn
-reasoning graded from photos. Both share `build_dashboard.py` (keep the two
-copies identical).
+reasoning graded from photos. Both share `build_dashboard.py`,
+`dashboard_template.md`, `submit_block.md` and `answers_view.js` (keep the two
+copies identical). The paper skill's rubric lock and photo submitter stay off
+here unless a spec sets `"lock_answers"` or `"submitter"` to true.
 
 **Nothing is written by hand.** Every part of this loop is typed: quiz answers,
 reasons, and any writing practice the schedule sets (essay outlines, short

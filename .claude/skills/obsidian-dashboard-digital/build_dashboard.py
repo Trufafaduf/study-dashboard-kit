@@ -11,7 +11,10 @@ Writes, inside the spec's wiki folder:
                                   same format
   - <prefix>-mastery.md          loop, rules, status table, attempt log, schedule
                                   (an existing attempt log is kept)
-  - <prefix>-dashboard.md        Dataview countdown, do-next, map, table, schedule
+  - <prefix>-dashboard.md        Dataview countdown, do-next, submit, map, table, schedule
+  - <prefix>-answers.json + .js  locked rubrics and answers (run from the paper
+                                  skill, or "lock_answers": true): the banks show an item's
+                                  rubric only once that attempt is graded
 
 The spec's "wiki_dir" is relative to the brain root: the BRAIN_ROOT environment
 variable if set, otherwise the nearest folder above the spec that contains
@@ -20,7 +23,7 @@ prints an obsidian:// link to the dashboard.
 
 Needs the Dataview plugin with JavaScript queries on. See SKILL.md.
 """
-import json, os, re, sys
+import base64, json, os, re, shutil, sys
 from urllib.parse import quote
 
 STATUS_KEYS = ("mastery", "pretest_score", "posttest_score", "last_graded")
@@ -138,18 +141,34 @@ def quiz_block(C):
             f"**[Open the {C['title']} quiz]({C['quiz_url']})** to answer, give your reasoning and get "
             "graded. Attempts sync back to this wiki when you ask Claude to sync." + nl)
 
-def question_lines(qs, logic):
-    """Multiple-choice and true/false questions, then their answers in a folded callout."""
+def question_lines(qs, logic, wrap=lambda a: a):
+    """Multiple-choice and true/false questions, then their answers in a folded callout
+    (passed through wrap, which locks them when answers are locked)."""
     b = []; n = len(qs)
     for k, q in enumerate(qs, 1):
         if q["type"] == "tf":
             b += [f"**{k}. True or false.** {q['stem']}", ""]
         else:
             b += [f"**{k}.** {q['stem']}", ""] + [f"- {chr(65+j)}. {o}" for j, o in enumerate(q["options"])] + [""]
-    b += [f"> [!check]- Answers: {n} questions, pass at {-(-n*4//5)}", f"> **Logic.** {logic}", ">",
-          "> | # | Answer | Why |", "> | --- | --- | --- |"]
-    b += [f"> | {k} | {q['answer']} | {q['why']} |" for k, q in enumerate(qs, 1)]
-    return b
+    a = [f"> [!check]- Answers: {n} questions, pass at {-(-n*4//5)}", f"> **Logic.** {logic}", ">",
+         "> | # | Answer | Why |", "> | --- | --- | --- |"]
+    a += [f"> | {k} | {q['answer']} | {q['why']} |" for k, q in enumerate(qs, 1)]
+    return b + wrap(a)
+
+def unfold(lines):
+    """A folded callout as plain markdown, for the answers file: the view renders it once unlocked."""
+    out = []
+    for l in lines:
+        m = re.match(r"^> \[!check\]- (.*)$", l)
+        out.append(f"**{m.group(1)}**" if m else re.sub(r"^> ?", "", l))
+    return "\n".join(out)
+
+def submit_block(C, K, SUBDIR):
+    """The dashboard's Submit work section: a photo button per item that saves the files into the
+    vault and flags the item page, so Claude can find and grade every pending submission."""
+    tpl = rd(os.path.join(os.path.dirname(os.path.abspath(__file__)), "submit_block.md"))
+    for k, v in {"@@TAG@@": C["tag"], "@@KEY@@": K, "@@SUBDIR@@": SUBDIR}.items(): tpl = tpl.replace(k, v)
+    return tpl
 
 def main(spec_path):
     S = json.loads(rd(spec_path))
@@ -157,6 +176,18 @@ def main(spec_path):
     PASS = f"{round(C.get('pass', 0.8) * 100)}%"; SOLID = f"{round(C.get('solid', 0.9) * 100)}%"
     P = C["prefix"]; BANK = C.get("bank_name", f"{P}-pretest-bank"); TRACK = C.get("tracker_name", f"{P}-mastery"); DASH = C.get("dashboard_name", f"{P}-dashboard")
     PBANK = C.get("post_bank_name", f"{P}-posttest-bank"); HAS_PB = any(post_banks(i) for i in ITEMS)
+    # Paper builds lock answers and add the photo submitter; digital builds (graded in the quiz) don't, unless the spec says so.
+    PAPER = "paper" in os.path.basename(os.path.dirname(os.path.abspath(__file__)))
+    LOCK = C.get("lock_answers", PAPER); SUBMIT = C.get("submitter", PAPER)
+    VW = vault_path(ROOT, os.path.relpath(W, ROOT).replace(os.sep, "/")); ANS = f"{P}-answers"; SUBDIR = f"{VW}/{P}-submissions"
+    answers = {}
+    def lock(item, key, prop):
+        """Swap a folded answer callout for a view that shows it only once `prop` is set on the item page."""
+        def wrap(lines):
+            if not LOCK: return lines
+            answers.setdefault(item, {})[key] = base64.b64encode(unfold(lines).encode("utf-8")).decode("ascii")
+            return ["```dataviewjs", f'await dv.view("{VW}/{ANS}", {{item: "{item}", set: "{key}", prop: "{prop}", data: "{VW}/{ANS}.json"}});', "```"]
+        return wrap
     BY = {i["id"]: i for i in ITEMS}
     for i in ITEMS:
         for n in i.get("needs", []): assert n in BY, f"{i['id']} needs unknown {n}"
@@ -210,11 +241,12 @@ def main(spec_path):
                   + (f" · needs {needs}" if needs else ""), ""]
             if i["format"] == "steps":
                 n = len(i["rubric"])
-                b += [f"**Problem.** {i['q']}", "", f"> [!check]- Rubric: {n} steps, pass at {-(-n*4//5)}",
+                ru = [f"> [!check]- Rubric: {n} steps, pass at {-(-n*4//5)}",
                       f"> **Logic.** {i['logic']}", ">", "> | # | Step | Expected |", "> | --- | --- | --- |"]
-                b += [f"> | {k} | {r[0]} | {r[1]} |" for k, r in enumerate(i["rubric"], 1)]
+                ru += [f"> | {k} | {r[0]} | {r[1]} |" for k, r in enumerate(i["rubric"], 1)]
+                b += [f"**Problem.** {i['q']}", ""] + lock(i["id"], "pre", "pretest_score")(ru)
             else:
-                b += question_lines(i["questions"], i["logic"])
+                b += question_lines(i["questions"], i["logic"], lock(i["id"], "pre", "pretest_score"))
             post = list(i.get("post", []))
             if post_banks(i): post.append(f"[[{PBANK}#{i['title']}]] ({'; '.join(pb['label'] for pb in post_banks(i))})")
             if post: b += ["", "Post-test from: " + "; ".join(post) + "."]
@@ -236,9 +268,14 @@ def main(spec_path):
                 b += [f"### {i['title']}", ""]
                 for pb in post_banks(i):
                     b += [f"[[{i['id']}]] · **{pb['label']}**" + (f" · {pb['source']}" if pb.get("source") else ""), ""]
-                    b += question_lines(pb["questions"], i["logic"]) + [""]
+                    b += question_lines(pb["questions"], i["logic"], lock(i["id"], "post:" + pb["key"], "posttest_score")) + [""]
         b += ["## Related", "", f"- [[{BANK}]]", f"- [[{TRACK}]]", f"- [[{DASH}]]"] + [f"- [[{r}]]" for r in C["related"]] + [""]
         wr(os.path.join(W, PBANK + ".md"), "\n".join(b))
+
+    # ---- locked answers: the data, and the view the banks call
+    if LOCK:
+        wr(os.path.join(W, ANS + ".json"), json.dumps(answers, indent=1, sort_keys=True) + "\n")
+        shutil.copyfile(os.path.join(os.path.dirname(os.path.abspath(__file__)), "answers_view.js"), os.path.join(W, ANS + ".js"))
 
     # ---- tracker (keep an existing attempt log)
     tp = os.path.join(W, TRACK + ".md"); log_rows = []; ticks = {}
@@ -287,8 +324,10 @@ def main(spec_path):
            "@@TAG@@": C["tag"], "@@KEY@@": K, "@@EXAM_ISO@@": C["exam"]["when"], "@@EXAM_LABEL@@": C["exam"]["label"],
            "@@EXAM_NAME@@": C["exam"]["name"], "@@COLS@@": json.dumps(C["cols"], ensure_ascii=False),
            "@@SHORT@@": json.dumps(short, ensure_ascii=False), "@@TRACK@@": TRACK, "@@BANK@@": BANK,
-           "@@GRADING@@": C["grading"].strip(), "@@QUIZ_BLOCK@@": quiz_block(C), "@@REVIEW_BLOCK@@": review_block(C, TRACK), "@@RELATED@@": "\n".join(f"- [[{r}]]" for r in C["related"])}
+           "@@GRADING@@": C["grading"].strip(), "@@QUIZ_BLOCK@@": quiz_block(C), "@@SUBMIT_BLOCK@@": submit_block(C, K, SUBDIR) if SUBMIT else "",
+           "@@BANK_NOTE@@": "questions; each rubric unlocks once that attempt is graded" if LOCK else "questions and folded answers", "@@REVIEW_BLOCK@@": review_block(C, TRACK), "@@RELATED@@": "\n".join(f"- [[{r}]]" for r in C["related"])}
     if not rep["@@QUIZ_BLOCK@@"]: tpl = tpl.replace("@@QUIZ_BLOCK@@\n", "")
+    if not rep["@@SUBMIT_BLOCK@@"]: tpl = tpl.replace("@@SUBMIT_BLOCK@@\n", "")
     if not rep["@@REVIEW_BLOCK@@"]: tpl = tpl.replace("@@REVIEW_BLOCK@@\n", "")
     for k, v in rep.items(): tpl = tpl.replace(k, v)
     wr(os.path.join(W, DASH + ".md"), tpl)

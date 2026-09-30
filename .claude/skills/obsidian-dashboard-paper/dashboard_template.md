@@ -40,15 +40,18 @@ const due = p => p.pretest_due ? dv.date(p.pretest_due) : null;
 const clean = t => t.text.replace(/\s*\[(due|review|completion):: [^\]]*\]/g, "");
 const reviews = dv.pages("#@@TAG@@").where(p => p.file.name === "@@TRACK@@").file.tasks
   .where(t => t.review && !t.completed && t.due && dv.date(t.due) <= today);
+const open = items.where(p => !p.submitted);
 const q = [
-  ...items.where(p => st(p) === "weak").sort(p => p.order).map(p => [p, "drill what you missed"]),
+  ...open.where(p => st(p) === "weak").sort(p => p.order).map(p => [p, "drill what you missed"]),
   ...reviews.map(t => [null, "review: " + clean(t)]),
-  ...items.where(p => st(p) === "untested" && due(p) && due(p) <= today).sort(p => p.order).map(p => [p, "pre-test"]),
-  ...items.where(p => st(p) === "shaky").sort(p => p.order).map(p => [p, "post-test on new questions"]),
+  ...open.where(p => st(p) === "untested" && due(p) && due(p) <= today).sort(p => p.order).map(p => [p, "pre-test"]),
+  ...open.where(p => st(p) === "shaky").sort(p => p.order).map(p => [p, "post-test on new questions"]),
 ];
 if (q.length) dv.list(q.slice(0, 14).map(([p, what]) => p ? `${p.file.link} — ${what} · ${p.pretest ?? ""}` : what));
 else dv.paragraph("Nothing due. Pull the next untested item forward.");
 ```
+
+@@SUBMIT_BLOCK@@
 
 ## Map
 
@@ -99,5 +102,5 @@ GROUP BY due
 ## Related
 
 - [[@@TRACK@@]] — the record and the rules.
-- [[@@BANK@@]] — questions and folded answers.
+- [[@@BANK@@]] — @@BANK_NOTE@@.
 @@RELATED@@

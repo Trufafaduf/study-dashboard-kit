@@ -180,6 +180,8 @@ def main():
         "examples/wiki/courses/phys105/phys105-mt1-dashboard.md",
         "examples/wiki/courses/phys105/phys105-mt1-mastery.md",
         "examples/wiki/courses/phys105/phys105-mt1-pretest-bank.md",
+        "examples/wiki/courses/phys105/phys105-mt1-answers.json",
+        "examples/wiki/courses/phys105/phys105-mt1-answers.js",
     ]
     for rel in expect:
         p = os.path.join(clone, rel)
@@ -191,6 +193,18 @@ def main():
             fail(f"leftover @@ placeholder in {rel}")
     if not FAILURES:
         ok("every expected build output exists with no leftover @@ placeholders")
+
+    # 4b. paper banks lock their rubrics and the dashboard has the submitter; digital ones don't
+    def text(rel): return open(os.path.join(clone, rel), encoding="utf-8").read()
+    pb, gb = text("examples/wiki/courses/phys105/phys105-mt1-pretest-bank.md"), text("examples/wiki/courses/geo110/geo110-mt1-pretest-bank.md")
+    if "[!check]" in pb or "dv.view(" not in pb:
+        fail("phys105 pre-test bank should lock its rubrics behind dv.view, with no folded callouts")
+    if "## Submit work" not in text("examples/wiki/courses/phys105/phys105-mt1-dashboard.md"):
+        fail("phys105 dashboard is missing its Submit work section")
+    if "[!check]" not in gb or "## Submit work" in text("examples/wiki/courses/geo110/geo110-mt1-dashboard.md"):
+        fail("geo110 (digital) should keep folded answers and have no submitter")
+    if not FAILURES:
+        ok("paper build locks rubrics and adds the submitter; digital build does not")
 
     # 5. idempotence: run the same commands again, tree must be unchanged
     before = tree_hashes(clone)
