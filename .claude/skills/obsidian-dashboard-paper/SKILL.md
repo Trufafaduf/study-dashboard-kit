@@ -44,9 +44,7 @@ graded: `submitted` (date), `submission_kind` (pre-test or post-test) and
 `submission_files` (vault paths). The photos stay in `P-submissions/`, which
 the brain should gitignore (`wiki/**/*-submissions/`).
 The lock and the submitter are on for every build run from this skill; a spec
-can turn either off with `"lock_answers": false` or `"submitter": false`. The
-digital skill locks too (its quiz seals the answers as well) but has no
-submitter. A rebuild keeps ticked boxes, both review and schedule tasks.
+can turn either off with `"lock_answers": false` or `"submitter": false`. A rebuild keeps ticked boxes, both review and schedule tasks.
 Nothing is kept in browser storage or an artifact.
 
 ## Steps

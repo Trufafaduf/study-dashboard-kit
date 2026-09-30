@@ -17,9 +17,7 @@ tools can be used, versioned and improved on their own.
   Both thresholds are spec settings (`pass`, `solid`). "Post-test: new
   questions" asks Claude to write fresh questions from the item's wiki page.
   Attempts are saved in the artifact's database; say "sync `<course>`" and
-  Claude logs them in the wiki and updates each item's mastery. Answers are
-  locked until graded, in the quiz (sealed in the page data) and on the
-  Obsidian bank page.
+  Claude logs them in the wiki and updates each item's mastery.
 - **`obsidian-dashboard-paper`**, for maths and hand-drawn work. One worked
   problem per concept with a step-by-step rubric; you work on paper, submit
   photos from the dashboard's button for that item (or send them in chat), and
