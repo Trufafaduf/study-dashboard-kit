@@ -135,6 +135,14 @@ th{font:500 11.5px/1.2 var(--sans);letter-spacing:.07em;text-transform:uppercase
 <script>
 const DATA = /*__DATA__*/null;
 const N = DATA.items, BY = Object.fromEntries(N.map(i => [i.id, i]));
+/* Answers and reference reasons are sealed in the page data, so neither the page nor its source shows
+   them before grading. key(q) opens one when it's needed: to mark, to grade, or on the result. */
+const SEALED = new WeakMap();
+const key = q => {
+  if (!q.sealed) return {answer: q.answer, why: q.why};
+  if (!SEALED.has(q)) SEALED.set(q, JSON.parse(new TextDecoder().decode(Uint8Array.from(atob([...q.sealed].reverse().join("")), c => c.charCodeAt(0)))));
+  return SEALED.get(q);
+};
 const esc = s => String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
 const store = {
   get(k, d){ try { const v = localStorage.getItem("q:" + DATA.course.prefix + ":" + k); return v == null ? d : JSON.parse(v); } catch(e){ return d; } },
@@ -247,7 +255,7 @@ function renderDetail(){
     const chosen = res ? res.answers[k].choice : draft.c[k];
     const optHtml = opts.map((o, j) => {
       const v = vals[j]; let cls = "";
-      if (res) { if (v === q.answer) cls = "right"; else if (v === chosen) cls = "wrong"; }
+      if (res) { if (v === key(q).answer) cls = "right"; else if (v === chosen) cls = "wrong"; }
       return `<label class="opt ${cls}"><input type="radio" name="q${k}" value="${esc(v)}" ${chosen === v ? "checked" : ""} ${view.phase !== "answer" ? "disabled" : ""}><span>${q.type === "tf" ? "" : "<b>" + v + ".</b> "}${esc(o)}</span></label>`;
     }).join("");
     const reason = res ? res.answers[k].reasoning : (draft.r[k] ?? "");
@@ -255,7 +263,7 @@ function renderDetail(){
     if (res) {
       const a = res.answers[k];
       verdict = `<div class="verdict"><div class="chips"><span class="${a.letterOk ? "ok" : "no"}">Answer ${a.letterOk ? "right" : "wrong"}</span><span class="${a.reasonScore >= REASON_PASS ? "ok" : "no"}">Reasoning ${a.reasonScore}/5 · ${esc((RUBRIC.find(r => r[0] === a.reasonScore) || [0, ""])[1])}</span></div>
-        ${a.feedback ? `<div>${esc(a.feedback)}</div>` : ""}<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div></div>`;
+        ${a.feedback ? `<div>${esc(a.feedback)}</div>` : ""}<div class="ref"><b>${esc(key(q).answer)}</b>: ${esc(key(q).why)}</div></div>`;
     }
     return `<div class="q"><span class="n">${q.type === "tf" ? "True or false" : "Question"} ${k + 1}</span><p class="stem">${esc(q.stem)}</p>
       <div class="opts" role="radiogroup">${optHtml}</div>
@@ -315,7 +323,7 @@ function updateSubmit(){
 // point works on the view captured at submit (v), never the global one.
 async function submit(){
   const v = view, d = getDraft();
-  const answers = v.questions.map((q, k) => ({ choice: d.c[k] || null, reasoning: (d.r[k] || "").trim(), letterOk: d.c[k] === q.answer }));
+  const answers = v.questions.map((q, k) => ({ choice: d.c[k] || null, reasoning: (d.r[k] || "").trim(), letterOk: d.c[k] === key(q).answer }));
   // A blank reason scores 1 without asking Claude; only written reasons are sent.
   const blank = a => !a.reasoning;
   answers.filter(blank).forEach(a => { a.reasonScore = 1; a.reasonOk = false; a.feedback = "Left blank."; });
@@ -325,7 +333,7 @@ async function submit(){
   let graded = null;
   if (sample) {
     const payload = todo.map(([q, a]) => ({ question: q.stem, options: q.type === "tf" ? ["True", "False"] : q.options.map((o, j) => LETTERS[j] + ". " + o),
-      correct_answer: q.answer, reference_reason: q.why, student_answer: a.choice || "(no answer chosen)", student_reasoning: a.reasoning }));
+      correct_answer: key(q).answer, reference_reason: key(q).why, student_answer: a.choice || "(no answer chosen)", student_reasoning: a.reasoning }));
     const prompt = `You are grading a student's written reasoning on ${DATA.course.subject} exam questions (multiple choice and true/false).
 For each question you get the question, its options, the correct answer, a reference reason from the course material, the student's answer, and the student's reasoning.
 Judge ONLY the reasoning; whether the chosen letter is right is marked separately. Give reason_score, an integer 1-5 for how close the reasoning is to the reference reason, in any words; brevity is fine:
@@ -362,9 +370,9 @@ function selfCheck(v, answers, msg){
   const el = document.getElementById("detail");
   el.querySelectorAll(".q").forEach((node, k) => {
     const q = v.questions[k];
-    if (!answers[k].reasoning) { const box = document.createElement("div"); box.className = "verdict"; box.innerHTML = `<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div><div class="note">Left blank: scored 1.</div>`; node.appendChild(box); return; }
+    if (!answers[k].reasoning) { const box = document.createElement("div"); box.className = "verdict"; box.innerHTML = `<div class="ref"><b>${esc(key(q).answer)}</b>: ${esc(key(q).why)}</div><div class="note">Left blank: scored 1.</div>`; node.appendChild(box); return; }
     const box = document.createElement("div"); box.className = "verdict";
-    box.innerHTML = `<div class="ref"><b>${esc(q.answer)}</b>: ${esc(q.why)}</div><label class="rl" for="s${k}">How close is your reason? (3 is a pass)</label><select class="sel" id="s${k}" data-k="${k}">${RUBRIC.map(r => `<option value="${r[0]}" ${r[0] === 3 ? "selected" : ""}>${r[0]} · ${r[1]}: ${esc(r[2])}</option>`).join("")}</select>`;
+    box.innerHTML = `<div class="ref"><b>${esc(key(q).answer)}</b>: ${esc(key(q).why)}</div><label class="rl" for="s${k}">How close is your reason? (3 is a pass)</label><select class="sel" id="s${k}" data-k="${k}">${RUBRIC.map(r => `<option value="${r[0]}" ${r[0] === 3 ? "selected" : ""}>${r[0]} · ${r[1]}: ${esc(r[2])}</option>`).join("")}</select>`;
     node.appendChild(box);
   });
   const a = document.getElementById("actions");

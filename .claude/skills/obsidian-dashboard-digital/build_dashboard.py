@@ -12,8 +12,8 @@ Writes, inside the spec's wiki folder:
   - <prefix>-mastery.md          loop, rules, status table, attempt log, schedule
                                   (an existing attempt log is kept)
   - <prefix>-dashboard.md        Dataview countdown, do-next, submit, map, table, schedule
-  - <prefix>-answers.json + .js  locked rubrics and answers (run from the paper
-                                  skill, or "lock_answers": true): the banks show an item's
+  - <prefix>-answers.json + .js  locked rubrics and answers (unless
+                                  "lock_answers": false): the banks show an item's
                                   rubric only once that attempt is graded
 
 The spec's "wiki_dir" is relative to the brain root: the BRAIN_ROOT environment
@@ -176,9 +176,10 @@ def main(spec_path):
     PASS = f"{round(C.get('pass', 0.8) * 100)}%"; SOLID = f"{round(C.get('solid', 0.9) * 100)}%"
     P = C["prefix"]; BANK = C.get("bank_name", f"{P}-pretest-bank"); TRACK = C.get("tracker_name", f"{P}-mastery"); DASH = C.get("dashboard_name", f"{P}-dashboard")
     PBANK = C.get("post_bank_name", f"{P}-posttest-bank"); HAS_PB = any(post_banks(i) for i in ITEMS)
-    # Paper builds lock answers and add the photo submitter; digital builds (graded in the quiz) don't, unless the spec says so.
+    # Every build locks answers until graded. Paper builds also get the photo submitter; digital ones are
+    # submitted in the quiz. A spec can override either.
     PAPER = "paper" in os.path.basename(os.path.dirname(os.path.abspath(__file__)))
-    LOCK = C.get("lock_answers", PAPER); SUBMIT = C.get("submitter", PAPER)
+    LOCK = C.get("lock_answers", True); SUBMIT = C.get("submitter", PAPER)
     VW = vault_path(ROOT, os.path.relpath(W, ROOT).replace(os.sep, "/")); ANS = f"{P}-answers"; SUBDIR = f"{VW}/{P}-submissions"
     answers = {}
     def lock(item, key, prop):

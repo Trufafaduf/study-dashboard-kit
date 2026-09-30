@@ -10,8 +10,10 @@ short written reasons. Everything is typed, so answering and grading happen in
 one page. Its sibling, `obsidian-dashboard-paper`, handles maths and drawn
 reasoning graded from photos. Both share `build_dashboard.py`,
 `dashboard_template.md`, `submit_block.md` and `answers_view.js` (keep the two
-copies identical). The paper skill's rubric lock and photo submitter stay off
-here unless a spec sets `"lock_answers"` or `"submitter"` to true.
+copies identical). Answers are locked in both places until graded: the quiz
+seals them in its page data and shows each only on the result, and the Obsidian
+bank shows an item's answers only once sync has set its score. The paper
+skill's photo submitter stays off here unless a spec sets `"submitter": true`.
 
 **Nothing is written by hand.** Every part of this loop is typed: quiz answers,
 reasons, and any writing practice the schedule sets (essay outlines, short
@@ -42,8 +44,8 @@ or `sync bio101` to pull new attempts into the wiki.
 
 | Where | What it does |
 | --- | --- |
-| **Quiz artifact** (claude.ai, `db` + `sample`) | Items grouped by lecture with live status; per question an answer choice and a reasoning box (drafts kept in memory and mirrored to browser storage when the frame allows it). Submit is always enabled: blanks are allowed so the user skips rather than guesses. A blank answer is marked N, and a blank reason scores 1 without being sent to Claude. On submit, grading runs in two parts: the letter is marked Y/N, and `sample` has Claude score each reason 1–5 against the reference reason (5 Exact, 4 Close, 3 Pass, 2 Partial, 1 Missing) with a sentence of feedback. An attempt's `score` is min(answers right, reasons at 3+) / total, and it passes at 80% (the spec's `pass`). It is also a pass, marked **solid**, when 90% or more of its answers are right (the spec's `solid`), however the reasons scored; the result lists the reasons under 3 to shore up. Saved attempts carry `solid` and `passed`. If Claude is unavailable the page falls back to a 1–5 self-score. "Post-test: new questions" has Claude write three fresh questions from the item's own wiki page text. Every attempt is saved to the `attempts` collection. |
-| **Obsidian** (built by `build_dashboard.py`) | Item properties, `P-pretest-bank` (the same questions with folded answers, an offline backup), `P-mastery` (loop, rules, attempt log, review checklist, schedule), `P-dashboard` (countdown, do-next, map, status, to-review progress and checklist, schedule, and a link to the quiz). |
+| **Quiz artifact** (claude.ai, `db` + `sample`) | Items grouped by lecture with live status; per question an answer choice and a reasoning box (drafts kept in memory and mirrored to browser storage when the frame allows it). Submit is always enabled: blanks are allowed so the user skips rather than guesses. A blank answer is marked N, and a blank reason scores 1 without being sent to Claude. On submit, grading runs in two parts: the letter is marked Y/N, and `sample` has Claude score each reason 1–5 against the reference reason (5 Exact, 4 Close, 3 Pass, 2 Partial, 1 Missing) with a sentence of feedback. An attempt's `score` is min(answers right, reasons at 3+) / total, and it passes at 80% (the spec's `pass`). It is also a pass, marked **solid**, when 90% or more of its answers are right (the spec's `solid`), however the reasons scored; the result lists the reasons under 3 to shore up. Saved attempts carry `solid` and `passed`. Correct answers and reference reasons are **sealed** in the page data (reversed base64 per question, opened by `key(q)` in the page) and appear only on the result, never before submit. If Claude is unavailable the page falls back to a 1–5 self-score. "Post-test: new questions" has Claude write three fresh questions from the item's own wiki page text. Every attempt is saved to the `attempts` collection. |
+| **Obsidian** (built by `build_dashboard.py`) | Item properties, `P-pretest-bank` (the same questions; each item's answers stay locked until sync sets its `pretest_score`, via `P-answers.json` and `P-answers.js`), `P-mastery` (loop, rules, attempt log, review checklist, schedule), `P-dashboard` (countdown, do-next, map, status, to-review progress and checklist, schedule, and a link to the quiz). |
 
 ## Building a new one
 
@@ -145,8 +147,14 @@ or `sync bio101` to pull new attempts into the wiki.
   post-test generation one call per click. Never loop.
 - The `attempts` store caps at 5,000 documents per artifact; one per attempt is
   fine for a term.
-- Answers and reasons are in the page source. That's acceptable for a
-  single-user study tool; don't share the artifact with classmates before an
-  exam if that matters.
+- Answers and reasons are sealed, not encrypted: the seal stops them showing
+  on the page or at a glance in its source, not a determined reader. Don't share
+  the artifact with classmates before an exam if that matters.
+- Any new code that needs a question's answer or reason must go through
+  `key(q)`; `q.answer` and `q.why` are absent on sealed questions. Questions
+  Claude generates at runtime are unsealed, and `key(q)` handles both.
+- After changing the quiz template, rebuild with `build_quiz.py` and republish
+  every course's artifact to its existing URL (read it first), so live quizzes
+  pick up the change. The `attempts` database survives a republish.
 - When republishing, a refusal means the live page changed: read the saved live
   copy, confirm your build includes it, then publish again.
