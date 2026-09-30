@@ -203,8 +203,7 @@ def main():
         fail("phys105 dashboard is missing its Submit work section")
     if "[!check]" in gb or "dv.view(" not in gb or "## Submit work" in text("examples/wiki/courses/geo110/geo110-mt1-dashboard.md"):
         fail("geo110 (digital) bank should lock its answers, and its dashboard should have no submitter")
-    quiz = text("examples/specs/out/geo110-mt1-quiz.html").split("const DATA = ", 1)[1].split("
-", 1)[0]
+    quiz = text("examples/specs/out/geo110-mt1-quiz.html").split("const DATA = ", 1)[1].split("\n", 1)[0]
     if '"why"' in quiz or '"answer"' in quiz or '"sealed"' not in quiz:
         fail("geo110 quiz page should carry sealed answers, with no plain answer or why fields")
     if not FAILURES:
